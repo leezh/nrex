@@ -1,8 +1,8 @@
 # NREX: Node RegEx
 
 Small node-based regular expression library. It only does text pattern
-matchhing and not replacement. To use just add the files `nrex.hpp` and
-`nrex.cpp` to your project.
+matchhing, not replacement. To use add the files `nrex.hpp` and
+`nrex.cpp` to your project and follow the example:
 
 	nrex regex;
 	regex.compile("^(fo+)bar$");
@@ -24,10 +24,11 @@ Currently supported features:
  * Alternation `|`
 
 To do list:
- * User-defined character classes such as `[A-Za-z]`
- * More efficient quantifiers
  * Range quantifiers `{0,1}`
+ * User-defined character classes such as `[A-Za-z]`
+ * More efficient quantifiers (expand then backtrack)
  * Backreferences `\1`
+ * Unicode `\uFFFF` code points
 
 ## License
 
