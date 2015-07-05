@@ -33,7 +33,23 @@
 #include "nrex.hpp"
 #include <stack>
 
+#ifdef _UNICODE
+#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
+#include <wctype.h>
+#else
+#include <wchar.h>
+#endif
+#define ISALPHANUM iswalnum
+#else
+#define ISALPHANUM isalnum
+#endif
+
 typedef nrex_string::value_type nrex_char;
+static const nrex_string numbers = NREX_STR("0123456789");
+static const nrex_string whitespaces = NREX_STR(" \t\r\n\f");
+static const nrex_string specials = NREX_STR("^$()[]\\.+*?");
+static const nrex_string quantifiers = NREX_STR("+*?{");
+static const nrex_string shorthands = NREX_STR("wWsSdD");
 
 struct nrex_search
 {
@@ -156,6 +172,63 @@ struct nrex_node_char : public nrex_node
         int test(nrex_search* s, int pos) const
         {
             if (s->end == pos || s->at(pos) != ch)
+            {
+                return -1;
+            }
+            return next ? next->test(s, pos + 1) : pos + 1;
+        }
+};
+
+struct nrex_node_shorthand_class : public nrex_node
+{
+        nrex_char code;
+
+        nrex_node_shorthand_class(nrex_char c)
+            : nrex_node(true)
+            , code(c)
+        {
+        }
+
+        int test(nrex_search* s, int pos) const
+        {
+            if (s->end == pos)
+            {
+                return -1;
+            }
+            nrex_char c = s->at(pos);
+            bool found = false;
+            bool invert = false;
+            switch (code)
+            {
+                case NREX_STR('.'):
+                    found = true;
+                    break;
+                case NREX_STR('W'):
+                    invert = true;
+                case NREX_STR('w'):
+                    if (c == '_' || ISALPHANUM(c))
+                    {
+                        found = true;
+                    }
+                    break;
+                case NREX_STR('D'):
+                    invert = true;
+                case NREX_STR('d'):
+                    if (numbers.find(c) != numbers.npos)
+                    {
+                        found = true;
+                    }
+                    break;
+                case NREX_STR('S'):
+                    invert = true;
+                case NREX_STR('s'):
+                    if (whitespaces.find(c) != whitespaces.npos)
+                    {
+                        found = true;
+                    }
+                    break;
+            }
+            if (found == invert)
             {
                 return -1;
             }
@@ -294,8 +367,6 @@ void nrex::reset()
 
 void nrex::compile(const nrex_string& pattern)
 {
-    const nrex_string quantifiers = NREX_STR("+*?{");
-    const nrex_string specials = NREX_STR("^$()[]\\.+*?");
     reset();
     nrex_node_group* root = new nrex_node_group(_capturing);
     std::stack<nrex_node_group*> stack;
@@ -384,6 +455,11 @@ void nrex::compile(const nrex_string& pattern)
             nrex_node_anchor* next = new nrex_node_anchor((*c == NREX_STR('$')));
             stack.top()->add_child(next);
         }
+        else if (*c == NREX_STR('.'))
+        {
+            nrex_node_shorthand_class* next = new nrex_node_shorthand_class('.');
+            stack.top()->add_child(next);
+        }
         else if (*c == NREX_STR('\\'))
         {
             nrex_char escape = *(c + 1);
@@ -391,6 +467,17 @@ void nrex::compile(const nrex_string& pattern)
             {
                 nrex_node_char* next = new nrex_node_char(escape);
                 stack.top()->add_child(next);
+                c++;
+            }
+            if (shorthands.find(escape) != shorthands.npos)
+            {
+                nrex_node_shorthand_class* next = new nrex_node_shorthand_class(escape);
+                stack.top()->add_child(next);
+                c++;
+            }
+            else
+            {
+                throw("Not supported");
             }
         }
         else

@@ -16,13 +16,15 @@ matchhing and not replacement. To use just add the files `nrex.hpp` and
 
 Currently supported features:
  * Capturing `()` and non-capturing `(?:)` groups
+ * Any character `.`
+ * Shorthand caracter classes `\w\W\s\S\d\D`
  * Simple quantifiers `?`, `*` and `+`
  * Lazy (non-greedy) quantifiers `*?`
  * Begining `^` and end `$` anchors
  * Alternation `|`
 
 To do list:
- * Character classes such as `[A-Za-z]`, `.` and `\w`
+ * User-defined character classes such as `[A-Za-z]`
  * More efficient quantifiers
  * Range quantifiers `{0,1}`
  * Backreferences `\1`

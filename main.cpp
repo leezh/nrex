@@ -10,9 +10,9 @@
 int main()
 {
     nrex n;
-    n.compile(NREX_STR("^(fo+)bar$"));
+    n.compile(NREX_STR("o+(\\w*)bar$"));
     nrex_result_list results;
-    nrex_string test = NREX_STR("fooobar");
+    nrex_string test = NREX_STR("fooo2000bar");
     n.match(test, results);
     TEST_COUT << test << std::endl
         << test.substr(results[0].start, results[0].length) << std::endl
