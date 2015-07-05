@@ -1,8 +1,8 @@
-                                  NREX
-========================================================================
+# NREX: Node RegEx
 
-Node-based regular expression library. To use just add the files
-`nrex.hpp` and `nrex.cpp` to your project.
+Small node-based regular expression library. It only does text pattern
+matchhing and not replacement. To use just add the files `nrex.hpp` and
+`nrex.cpp` to your project.
 
 	nrex regex;
 	regex.compile("^(fo+)bar$");
