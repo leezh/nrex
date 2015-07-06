@@ -18,6 +18,7 @@ Currently supported features:
  * Capturing `()` and non-capturing `(?:)` groups
  * Any character `.`
  * Shorthand caracter classes `\w\W\s\S\d\D`
+ * User-defined character classes such as `[A-Za-z]`
  * Simple quantifiers `?`, `*` and `+`
  * Lazy (non-greedy) quantifiers `*?`
  * Begining `^` and end `$` anchors
@@ -25,7 +26,6 @@ Currently supported features:
 
 To do list:
  * Range quantifiers `{0,1}`
- * User-defined character classes such as `[A-Za-z]`
  * More efficient quantifiers (expand then backtrack)
  * Backreferences `\1`
  * Unicode `\uFFFF` code points

@@ -10,7 +10,7 @@
 int main()
 {
     nrex n;
-    n.compile(NREX_STR("o+(\\w*)bar$"));
+    n.compile(NREX_STR("[a-f]o+(\\w*)bar$"));
     nrex_result_list results;
     nrex_string test = NREX_STR("fooo2000bar");
     n.match(test, results);

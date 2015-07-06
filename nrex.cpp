@@ -32,6 +32,7 @@
 
 #include "nrex.hpp"
 #include <stack>
+#include <bitset>
 
 #ifdef _UNICODE
 #if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
@@ -45,9 +46,12 @@
 #endif
 
 typedef nrex_string::value_type nrex_char;
+static const nrex_string escapes = NREX_STR("^$()[]\\.+*?-aefnrtv");
+static const nrex_string escaped_pairs = NREX_STR("^$()[]\\.+*?-\a\e\f\n\r\t\v");
 static const nrex_string numbers = NREX_STR("0123456789");
+static const nrex_string uppers = NREX_STR("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+static const nrex_string lowers = NREX_STR("abcdefghijklmnopqrstuvwxyz");
 static const nrex_string whitespaces = NREX_STR(" \t\r\n\f");
-static const nrex_string specials = NREX_STR("^$()[]\\.+*?");
 static const nrex_string quantifiers = NREX_STR("+*?{");
 static const nrex_string shorthands = NREX_STR("wWsSdD");
 
@@ -72,6 +76,43 @@ struct nrex_search
         {
         }
 };
+
+bool nrex_shorthand_test(nrex_char repr, nrex_char c)
+{
+    bool found = false;
+    bool invert = false;
+    switch (repr)
+    {
+        case NREX_STR('.'):
+            found = true;
+            break;
+        case NREX_STR('W'):
+            invert = true;
+        case NREX_STR('w'):
+            if (c == '_' || ISALPHANUM(c))
+            {
+                found = true;
+            }
+            break;
+        case NREX_STR('D'):
+            invert = true;
+        case NREX_STR('d'):
+            if (numbers.find(c) != numbers.npos)
+            {
+                found = true;
+            }
+            break;
+        case NREX_STR('S'):
+            invert = true;
+        case NREX_STR('s'):
+            if (whitespaces.find(c) != whitespaces.npos)
+            {
+                found = true;
+            }
+            break;
+    }
+    return (found != invert);
+}
 
 struct nrex_node
 {
@@ -118,7 +159,7 @@ struct nrex_node_group : public nrex_node
         virtual ~nrex_node_group()
         {
             std::vector<nrex_node*>::iterator it;
-            for (it = childset.begin(); it != childset.end(); it++)
+            for (it = childset.begin(); it != childset.end(); ++it)
             {
                 delete *it;
             }
@@ -128,7 +169,7 @@ struct nrex_node_group : public nrex_node
         int test(nrex_search* s, int pos) const
         {
             std::vector<nrex_node*>::const_iterator it;
-            for (it = childset.begin(); it != childset.end(); it++)
+            for (it = childset.begin(); it != childset.end(); ++it)
             {
                 int res = (*it)->test(s, pos);
                 if (res >= 0)
@@ -179,14 +220,43 @@ struct nrex_node_char : public nrex_node
         }
 };
 
-struct nrex_node_shorthand_class : public nrex_node
+struct nrex_node_class : public nrex_node
 {
-        nrex_char code;
-
-        nrex_node_shorthand_class(nrex_char c)
-            : nrex_node(true)
-            , code(c)
+        struct nrex_range
         {
+                nrex_char start;
+                nrex_char end;
+                nrex_range(nrex_char s, nrex_char e)
+                    : start(s)
+                    , end(e)
+                {
+                }
+        };
+
+        nrex_string characters;
+        std::vector<nrex_char> shorthands;
+        std::vector<nrex_range> ranges;
+        bool negate;
+
+        nrex_node_class()
+            : nrex_node(true)
+            , negate(false)
+        {
+        }
+
+        void add_char(nrex_char c)
+        {
+            characters.push_back(c);
+        }
+
+        void add_char_range(nrex_char start, nrex_char end)
+        {
+            ranges.push_back(nrex_range(start, end));
+        }
+
+        void add_shorthand(nrex_char c)
+        {
+            shorthands.push_back(c);
         }
 
         int test(nrex_search* s, int pos) const
@@ -197,38 +267,55 @@ struct nrex_node_shorthand_class : public nrex_node
             }
             nrex_char c = s->at(pos);
             bool found = false;
-            bool invert = false;
-            switch (code)
+            if (characters.find(c) != characters.npos)
             {
-                case NREX_STR('.'):
-                    found = true;
-                    break;
-                case NREX_STR('W'):
-                    invert = true;
-                case NREX_STR('w'):
-                    if (c == '_' || ISALPHANUM(c))
-                    {
-                        found = true;
-                    }
-                    break;
-                case NREX_STR('D'):
-                    invert = true;
-                case NREX_STR('d'):
-                    if (numbers.find(c) != numbers.npos)
-                    {
-                        found = true;
-                    }
-                    break;
-                case NREX_STR('S'):
-                    invert = true;
-                case NREX_STR('s'):
-                    if (whitespaces.find(c) != whitespaces.npos)
-                    {
-                        found = true;
-                    }
-                    break;
+                found = true;
             }
-            if (found == invert)
+            else
+            {
+                std::vector<nrex_char>::const_iterator it;
+                for (it = shorthands.begin(); it != shorthands.end(); ++it)
+                {
+                    if (nrex_shorthand_test(*it, c))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (!found)
+            {
+                std::vector<nrex_range>::const_iterator it;
+                for (it = ranges.begin(); it != ranges.end(); ++it)
+                {
+                    if (it->start <= c && c <= it->end)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            if (found == negate)
+            {
+                return -1;
+            }
+            return next ? next->test(s, pos + 1) : pos + 1;
+        }
+};
+
+struct nrex_node_shorthand_class : public nrex_node
+{
+        nrex_char repr;
+
+        nrex_node_shorthand_class(nrex_char c)
+            : nrex_node(true)
+            , repr(c)
+        {
+        }
+
+        int test(nrex_search* s, int pos) const
+        {
+            if (s->end == pos || !nrex_shorthand_test(repr, s->at(pos)))
             {
                 return -1;
             }
@@ -301,7 +388,7 @@ struct nrex_node_quantifier : public nrex_node
                         last_count = count;
                     }
                 }
-                count++;
+                ++count;
                 next_pos = res;
             }
             if (last_pos >= 0)
@@ -374,7 +461,7 @@ void nrex::compile(const nrex_string& pattern)
     _root = root;
 
     nrex_string::const_iterator c;
-    for (c = pattern.begin(); c != pattern.end(); c++)
+    for (c = pattern.begin(); c != pattern.end(); ++c)
     {
         if (*c == NREX_STR('('))
         {
@@ -408,6 +495,87 @@ void nrex::compile(const nrex_string& pattern)
             else
             {
                 throw("unexpected ')'");
+            }
+        }
+        else if (*c == NREX_STR('['))
+        {
+            nrex_node_class* next = new nrex_node_class;
+            stack.top()->add_child(next);
+            if (*(c + 1) == NREX_STR('^'))
+            {
+                next->negate = true;
+                ++c;
+            }
+            while (true)
+            {
+                if (++c == pattern.end())
+                {
+                    throw("unclosed character class ']'");
+                }
+                if (*c == NREX_STR(']'))
+                {
+                    break;
+                }
+                else if (*c == NREX_STR('\\'))
+                {
+                    nrex_char repr = *(c + 1);
+                    nrex_string::size_type pos = escapes.find(repr);
+                    if (pos != escapes.npos)
+                    {
+                        next->add_char(escaped_pairs.at(pos));
+                        ++c;
+                    }
+                    else if (shorthands.find(repr) != shorthands.npos)
+                    {
+                        next->add_shorthand(repr);
+                        ++c;
+                    }
+                    else
+                    {
+                        throw("Not supported");
+                    }
+                }
+                else
+                {
+                    if (uppers.find(*c) != uppers.npos)
+                    {
+                        if (*(c + 1) == NREX_STR('-'))
+                        {
+                            if (uppers.find(*(c + 2)) != uppers.npos)
+                            {
+                                next->add_char_range(*c, *(c + 2));
+                                c += 2;
+                                continue;
+                            }
+                        }
+                    }
+                    if (lowers.find(*c) != lowers.npos)
+                    {
+                        if (*(c + 1) == NREX_STR('-'))
+                        {
+                            if (lowers.find(*(c + 2)) != lowers.npos)
+                            {
+                                next->add_char_range(*c, *(c + 2));
+                                c += 2;
+                                continue;
+                            }
+                        }
+                    }
+                    if (numbers.find(*c) != numbers.npos)
+                    {
+                        if (*(c + 1) == NREX_STR('-'))
+                        {
+                            if (numbers.find(*(c + 2)) != numbers.npos)
+                            {
+                                next->add_char_range(*c, *(c + 2));
+                                c += 2;
+                                continue;
+                            }
+                        }
+                    }
+                    next->add_char(*c);
+                }
+
             }
         }
         else if (quantifiers.find(*c) != quantifiers.npos)
@@ -462,18 +630,19 @@ void nrex::compile(const nrex_string& pattern)
         }
         else if (*c == NREX_STR('\\'))
         {
-            nrex_char escape = *(c + 1);
-            if (specials.find(escape) != specials.npos)
+            nrex_char repr = *(c + 1);
+            nrex_string::size_type pos = escapes.find(repr);
+            if (pos != escapes.npos)
             {
-                nrex_node_char* next = new nrex_node_char(escape);
+                nrex_node_char* next = new nrex_node_char(escaped_pairs.at(pos));
                 stack.top()->add_child(next);
-                c++;
+                ++c;
             }
-            if (shorthands.find(escape) != shorthands.npos)
+            else if (shorthands.find(repr) != shorthands.npos)
             {
-                nrex_node_shorthand_class* next = new nrex_node_shorthand_class(escape);
+                nrex_node_shorthand_class* next = new nrex_node_shorthand_class(repr);
                 stack.top()->add_child(next);
-                c++;
+                ++c;
             }
             else
             {
@@ -493,9 +662,9 @@ bool nrex::match(const nrex_string& str, nrex_result_list& results) const
     results.resize(_capturing + 1);
     nrex_search s(str, results);
     nrex_result_list::iterator res_it;
-    for (unsigned int i = 0; i < str.length(); i++)
+    for (unsigned int i = 0; i < str.length(); ++i)
     {
-        for (res_it = results.begin(); res_it != results.end(); res_it++)
+        for (res_it = results.begin(); res_it != results.end(); ++res_it)
         {
             res_it->start = 0;
             res_it->length = 0;
