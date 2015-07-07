@@ -586,7 +586,6 @@ void nrex::compile(const nrex_string& pattern)
                 throw("Element not quantifiable");
             }
             nrex_node_quantifier* quant = new nrex_node_quantifier;
-            nrex_string::const_iterator end = c;
             if (*c == NREX_STR('?'))
             {
                 quant->min = 0;
@@ -602,10 +601,56 @@ void nrex::compile(const nrex_string& pattern)
                 quant->min = 0;
                 quant->max = -1;
             }
-            if (*(end + 1) == NREX_STR('?'))
+            else if (*c == NREX_STR('{'))
             {
-                c = (end + 1);
+                bool max_set = false;
+                quant->min = 0;
+                quant->max = -1;
+                while (true)
+                {
+                    if (++c == pattern.end())
+                    {
+                        throw("expected closing '}'");
+                    }
+                    else if (*c == NREX_STR('}'))
+                    {
+                        break;
+                    }
+                    else if (*c == NREX_STR(','))
+                    {
+                        max_set = true;
+                        continue;
+                    }
+                    std::size_t pos = numbers.find(*c);
+                    if (pos == numbers.npos)
+                    {
+                        throw("expected numeric digits, ',' or '}'");
+                    }
+                    if (max_set)
+                    {
+                        if (quant->max < 0)
+                        {
+                            quant->max = int(pos);
+                        }
+                        else
+                        {
+                            quant->max = quant->max * 10 + int(pos);
+                        }
+                    }
+                    else
+                    {
+                        quant->min = quant->min * 10 + int(pos);
+                    }
+                }
+                if (!max_set)
+                {
+                    quant->max = quant->min;
+                }
+            }
+            if (*(c + 1) == NREX_STR('?'))
+            {
                 quant->greedy = false;
+                ++c;
             }
             stack.top()->add_child(quant);
             child->previous->next = quant;
