@@ -34,8 +34,8 @@
 #include <stack>
 #include <bitset>
 
-#ifdef _UNICODE
-#if defined (__unix__) || (defined (__APPLE__) && defined (__MACH__))
+#ifdef NREX_UNICODE
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 #include <wctype.h>
 #else
 #include <wchar.h>
@@ -43,6 +43,12 @@
 #define ISALPHANUM iswalnum
 #else
 #define ISALPHANUM isalnum
+#endif
+
+#ifdef NREX_THROW_ERROR
+#define NREX_COMPILE_ERROR(M) throw nrex_compile_error(M)
+#else
+#define NREX_COMPILE_ERROR(M) reset(); return false
 #endif
 
 typedef nrex_string::value_type nrex_char;
@@ -484,6 +490,11 @@ nrex::~nrex()
     }
 }
 
+bool nrex::valid()
+{
+    return (_root != NULL);
+}
+
 void nrex::reset()
 {
     _capturing = 0;
@@ -493,7 +504,7 @@ void nrex::reset()
     }
 }
 
-void nrex::compile(const nrex_string& pattern)
+bool nrex::compile(const nrex_string& pattern)
 {
     reset();
     nrex_node_group* root = new nrex_node_group(_capturing);
@@ -517,7 +528,7 @@ void nrex::compile(const nrex_string& pattern)
                 }
                 else
                 {
-                    throw("not supported");
+                    NREX_COMPILE_ERROR("unrecognised qualifier for parenthesis");
                 }
             }
             else
@@ -535,7 +546,7 @@ void nrex::compile(const nrex_string& pattern)
             }
             else
             {
-                throw("unexpected ')'");
+                NREX_COMPILE_ERROR("unexpected ')'");
             }
         }
         else if (*c == NREX_STR('['))
@@ -551,7 +562,7 @@ void nrex::compile(const nrex_string& pattern)
             {
                 if (++c == pattern.end())
                 {
-                    throw("unclosed character class ']'");
+                    NREX_COMPILE_ERROR("unclosed character class '[]'");
                 }
                 if (*c == NREX_STR(']'))
                 {
@@ -573,7 +584,7 @@ void nrex::compile(const nrex_string& pattern)
                     }
                     else
                     {
-                        throw("Not supported");
+                        NREX_COMPILE_ERROR("escape token not recognised");
                     }
                 }
                 else
@@ -624,7 +635,7 @@ void nrex::compile(const nrex_string& pattern)
             nrex_node* child = stack.top()->back;
             if (!child->quantifiable)
             {
-                throw("Element not quantifiable");
+                NREX_COMPILE_ERROR("element not quantifiable");
             }
             nrex_node_quantifier* quant = new nrex_node_quantifier;
             if (*c == NREX_STR('?'))
@@ -651,7 +662,7 @@ void nrex::compile(const nrex_string& pattern)
                 {
                     if (++c == pattern.end())
                     {
-                        throw("expected closing '}'");
+                        NREX_COMPILE_ERROR("unclosed range quantifier '{}'");
                     }
                     else if (*c == NREX_STR('}'))
                     {
@@ -665,7 +676,7 @@ void nrex::compile(const nrex_string& pattern)
                     std::size_t pos = numbers.find(*c);
                     if (pos == numbers.npos)
                     {
-                        throw("expected numeric digits, ',' or '}'");
+                        NREX_COMPILE_ERROR("expected numeric digits, ',' or '}'");
                     }
                     if (max_set)
                     {
@@ -749,14 +760,14 @@ void nrex::compile(const nrex_string& pattern)
                     }
                     if (ref > _capturing)
                     {
-                        throw("backreference to capture that doesn't exist (yet)");
+                        NREX_COMPILE_ERROR("backreference to non-existent capture");
                     }
                     nrex_node_backreference* next = new nrex_node_backreference(ref);
                     stack.top()->add_child(next);
                 }
                 else
                 {
-                    throw("Not supported");
+                    NREX_COMPILE_ERROR("escape token not recognised");
                 }
             }
         }
@@ -766,6 +777,7 @@ void nrex::compile(const nrex_string& pattern)
             stack.top()->add_child(next);
         }
     }
+    return true;
 }
 
 bool nrex::match(const nrex_string& str, nrex_result_list& results) const

@@ -36,6 +36,9 @@
 #include <string>
 #include <vector>
 
+//#define NREX_UNICODE
+//#define NREX_THROW_ERROR
+
 #ifdef NREX_UNICODE
 typedef std::wstring nrex_string;
 #define NREX_STR(X) L##X
@@ -63,8 +66,27 @@ class nrex
         nrex();
         ~nrex();
         void reset();
-        void compile(const nrex_string& pattern);
+        bool valid();
+        bool compile(const nrex_string& pattern);
         bool match(const nrex_string& str, nrex_result_list& results) const;
 };
+
+#ifdef NREX_THROW_ERROR
+#include <stdexcept>
+
+class nrex_compile_error : std::runtime_error
+{
+    public:
+        nrex_compile_error(const std::string& message)
+            : std::runtime_error(message)
+        {
+        }
+
+        ~nrex_compile_error() throw()
+        {
+        }
+};
+
+#endif
 
 #endif // NREX_HPP
