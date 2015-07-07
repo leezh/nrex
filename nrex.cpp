@@ -141,6 +141,19 @@ struct nrex_node
         {
             return next ? next->test(s, pos) : -1;
         }
+
+        virtual int test_parent(nrex_search* s, int pos) const
+        {
+            if (next)
+            {
+                pos = next->test(s, pos);
+            }
+            if (parent && pos >= 0)
+            {
+                pos = parent->test_parent(s, pos);
+            }
+            return pos;
+        }
 };
 
 struct nrex_node_group : public nrex_node
@@ -168,6 +181,10 @@ struct nrex_node_group : public nrex_node
 
         int test(nrex_search* s, int pos) const
         {
+            if (capturing >= 0)
+            {
+                s->captures[capturing].start = pos;
+            }
             std::vector<nrex_node*>::const_iterator it;
             for (it = childset.begin(); it != childset.end(); ++it)
             {
@@ -176,13 +193,21 @@ struct nrex_node_group : public nrex_node
                 {
                     if (capturing >= 0)
                     {
-                        s->captures[capturing].start = pos;
                         s->captures[capturing].length = res - pos;
                     }
                     return next ? next->test(s, res) : res;
                 }
             }
             return -1;
+        }
+
+        virtual int test_parent(nrex_search* s, int pos) const
+        {
+            if (capturing >= 0)
+            {
+                s->captures[capturing].length = pos - s->captures[capturing].start;
+            }
+            return nrex_node::test_parent(s, pos);
         }
 
         void add_childset()
@@ -349,57 +374,45 @@ struct nrex_node_quantifier : public nrex_node
 
         int test(nrex_search* s, int pos) const
         {
-            int count = 0;
-            int next_pos = pos;
-            int last_pos = -1;
-            int last_count = 0;
-            // Keep incrementing until we can't anymore
-            // Record the last success
-            while ((max < 0 || count <= max) && next_pos <= s->end)
+            std::stack<int> backtrack;
+            backtrack.push(pos);
+            while (backtrack.top() <= s->end)
             {
-                int res = next_pos;
-                if (count > 0)
+                if (max >= 1 && backtrack.size() > (std::size_t)max)
                 {
-                    res = child->test(s, next_pos);
-                    if (res < 0 || res == next_pos)
+                    break;
+                }
+                if (!greedy && (std::size_t)min < backtrack.size())
+                {
+                    int res = backtrack.top();
+                    if (next)
                     {
-                        break;
+                        res = next->test(s, res);
+                    }
+                    if (res >= 0 && parent->test_parent(s, res) >= 0)
+                    {
+                        return res;
                     }
                 }
-                if (count >= min)
+                int res = child->test(s, backtrack.top());
+                if (res < 0 || res == backtrack.top())
                 {
-                    int next_res = next ? next->test(s, res) : res;
-                    nrex_node* p = parent;
-                    while (next_res >= 0 && p != NULL)
-                    {
-                        if (p->next)
-                        {
-                            next_res = p->next->test(s, next_res);
-                        }
-                        p = p->parent;
-                    }
-                    if (next_res >= 0)
-                    {
-                        if (!greedy)
-                        {
-                            return next_res;
-                        }
-                        last_pos = next_pos;
-                        last_count = count;
-                    }
+                    break;
                 }
-                ++count;
-                next_pos = res;
+                backtrack.push(res);
             }
-            if (last_pos >= 0)
+            while (greedy && (std::size_t)min < backtrack.size())
             {
-                // Redo the test to get the correct captures
-                int res = last_pos;
-                if (last_count > 0)
+                int res = backtrack.top();
+                if (next)
                 {
-                    res = child->test(s, res);
+                    res = next->test(s, res);
                 }
-                return next ? next->test(s, res) : res;
+                if (res >= 0 && parent->test_parent(s, res) >= 0)
+                {
+                    return res;
+                }
+                backtrack.pop();
             }
             return -1;
         }
@@ -426,6 +439,34 @@ struct nrex_node_anchor : public nrex_node
                 return -1;
             }
             return next ? next->test(s, pos) : pos;
+        }
+};
+
+struct nrex_node_backreference : public nrex_node
+{
+        int ref;
+
+        nrex_node_backreference(int ref)
+            : nrex_node()
+            , ref(ref)
+        {
+        }
+
+        int test(nrex_search* s, int pos) const
+        {
+            nrex_result& r = s->captures[ref];
+            for (int i = 0; i < r.length; ++i)
+            {
+                if (pos + i >= s->end)
+                {
+                    return -1;
+                }
+                if (s->at(r.start + i) != s->at(pos + i))
+                {
+                    return -1;
+                }
+            }
+            return next ? next->test(s, pos + r.length) : pos + r.length;
         }
 };
 
@@ -691,7 +732,32 @@ void nrex::compile(const nrex_string& pattern)
             }
             else
             {
-                throw("Not supported");
+                pos = numbers.find(repr);
+                if (pos != numbers.npos && pos > 0)
+                {
+                    nrex_string::size_type pos2 = numbers.find(*(c + 2));
+                    int ref = 0;
+                    if (pos2 != numbers.npos)
+                    {
+                        ref = int(pos) * 10 + int(pos2);
+                        c += 2;
+                    }
+                    else
+                    {
+                        ref = int(pos);
+                        ++c;
+                    }
+                    if (ref > _capturing)
+                    {
+                        throw("backreference to capture that doesn't exist (yet)");
+                    }
+                    nrex_node_backreference* next = new nrex_node_backreference(ref);
+                    stack.top()->add_child(next);
+                }
+                else
+                {
+                    throw("Not supported");
+                }
             }
         }
         else

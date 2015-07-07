@@ -24,10 +24,9 @@ Currently supported features:
  * Lazy (non-greedy) quantifiers `*?`
  * Begining `^` and end `$` anchors
  * Alternation `|`
+ * Backreferences `\1` to `\99`
 
 To do list:
- * More efficient quantifiers (expand then backtrack)
- * Backreferences `\1`
  * Unicode `\uFFFF` code points
 
 ## License
