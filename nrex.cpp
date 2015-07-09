@@ -800,19 +800,24 @@ bool nrex::compile(const nrex_string& pattern)
     return true;
 }
 
-bool nrex::match(const nrex_string& str, nrex_result_list& results) const
+bool nrex::match(const nrex_string& str, nrex_result_list& results, int start, int end) const
 {
     results.resize(_capturing + 1);
     nrex_search s(str, results);
+    s.start = start;
+    if (end >= 0)
+    {
+        s.end = end;
+    }
     nrex_result_list::iterator res_it;
-    for (unsigned int i = 0; i < str.length(); ++i)
+    for (int i = s.start; i < s.end; ++i)
     {
         for (res_it = results.begin(); res_it != results.end(); ++res_it)
         {
             res_it->start = 0;
             res_it->length = 0;
         }
-        if (_root->test(&s, s.start + i) >= 0)
+        if (_root->test(&s, i) >= 0)
         {
             return true;
         }

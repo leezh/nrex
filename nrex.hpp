@@ -68,7 +68,7 @@ class nrex
         void reset();
         bool valid();
         bool compile(const nrex_string& pattern);
-        bool match(const nrex_string& str, nrex_result_list& results) const;
+        bool match(const nrex_string& str, nrex_result_list& results, int start = 0, int end = -1) const;
 };
 
 #ifdef NREX_THROW_ERROR
