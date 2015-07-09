@@ -171,8 +171,8 @@ struct nrex_node_group : public nrex_node
         nrex_node_group(int capturing)
             : nrex_node(true)
             , capturing(capturing)
+            , back(NULL)
         {
-            add_childset();
         }
 
         virtual ~nrex_node_group()
@@ -218,16 +218,39 @@ struct nrex_node_group : public nrex_node
 
         void add_childset()
         {
-            back = new nrex_node();
-            childset.push_back(back);
+            back = NULL;
         }
 
         void add_child(nrex_node* node)
         {
             node->parent = this;
             node->previous = back;
-            back->next = node;
+            if (back)
+            {
+                back->next = node;
+            }
+            else
+            {
+                childset.push_back(node);
+            }
             back = node;
+        }
+
+        nrex_node* swap_back(nrex_node* node)
+        {
+            if (!back)
+            {
+                add_child(node);
+                return NULL;
+            }
+            nrex_node* old = back;
+            if (!old->previous)
+            {
+                childset.pop_back();
+            }
+            back = old->previous;
+            add_child(node);
+            return old;
         }
 };
 
@@ -632,12 +655,15 @@ bool nrex::compile(const nrex_string& pattern)
         }
         else if (quantifiers.find(*c) != quantifiers.npos)
         {
-            nrex_node* child = stack.top()->back;
-            if (!child->quantifiable)
+            nrex_node_quantifier* quant = new nrex_node_quantifier;
+            quant->child = stack.top()->swap_back(quant);
+            if (quant->child == NULL || !quant->child->quantifiable)
             {
                 NREX_COMPILE_ERROR("element not quantifiable");
             }
-            nrex_node_quantifier* quant = new nrex_node_quantifier;
+            quant->child->previous = NULL;
+            quant->child->next = NULL;
+            quant->child->parent = quant;
             if (*c == NREX_STR('?'))
             {
                 quant->min = 0;
@@ -704,12 +730,6 @@ bool nrex::compile(const nrex_string& pattern)
                 quant->greedy = false;
                 ++c;
             }
-            stack.top()->add_child(quant);
-            child->previous->next = quant;
-            child->previous = NULL;
-            child->next = NULL;
-            child->parent = quant;
-            quant->child = child;
         }
         else if (*c == NREX_STR('|'))
         {
