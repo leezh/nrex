@@ -476,7 +476,7 @@ struct nrex_node_backreference : public nrex_node
         int ref;
 
         nrex_node_backreference(int ref)
-            : nrex_node()
+            : nrex_node(true)
             , ref(ref)
         {
         }

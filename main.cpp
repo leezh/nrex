@@ -10,7 +10,7 @@
 int main()
 {
     nrex n;
-    n.compile(NREX_STR("^f*?([a-f]{2,3})(o+)\\2o(\\w+)bar$"));
+    n.compile(NREX_STR("^f*?[a-f]+((\\w)\\2+)o(\\w*)bar$"));
     nrex_result_list results;
     nrex_string test = NREX_STR("ffffoooooo2000bar");
     n.match(test, results);
