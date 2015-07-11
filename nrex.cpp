@@ -40,6 +40,7 @@
 #define NREX_ISALPHANUM iswalnum
 #define NREX_STRLEN wcslen
 #else
+#include <string.h>
 #define NREX_ISALPHANUM isalnum
 #define NREX_STRLEN strlen
 #endif
