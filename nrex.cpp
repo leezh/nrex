@@ -51,11 +51,63 @@
 #define NREX_COMPILE_ERROR(M) reset(); return false
 #endif
 
-static const nrex_string escapes = NREX_STR("^$()[]\\.+*?-aefnrtv");
-static const nrex_string escaped_pairs = NREX_STR("^$()[]\\.+*?-\a\e\f\n\r\t\v");
-static const nrex_string whitespaces = NREX_STR(" \t\r\n\f");
-static const nrex_string quantifiers = NREX_STR("+*?{");
-static const nrex_string shorthands = NREX_STR("wWsSdD");
+static nrex_char nrex_unescape(nrex_char repr)
+{
+    switch (repr)
+    {
+        case NREX_STR('^'):
+            return NREX_STR('^');
+
+        case NREX_STR('$'):
+            return NREX_STR('$');
+
+        case NREX_STR('('):
+            return NREX_STR('(');
+
+        case NREX_STR(')'):
+            return NREX_STR(')');
+
+        case NREX_STR('\\'):
+            return NREX_STR('\\');
+
+        case NREX_STR('.'):
+            return NREX_STR('.');
+
+        case NREX_STR('+'):
+            return NREX_STR('+');
+
+        case NREX_STR('*'):
+            return NREX_STR('*');
+
+        case NREX_STR('?'):
+            return NREX_STR('?');
+
+        case NREX_STR('-'):
+            return NREX_STR('-');
+
+        case NREX_STR('a'):
+            return NREX_STR('\a');
+
+        case NREX_STR('e'):
+            return NREX_STR('\e');
+
+        case NREX_STR('f'):
+            return NREX_STR('\f');
+
+        case NREX_STR('n'):
+            return NREX_STR('\n');
+
+        case NREX_STR('r'):
+            return NREX_STR('\r');
+
+        case NREX_STR('t'):
+            return NREX_STR('\t');
+
+        case NREX_STR('v'):
+            return NREX_STR('\v');
+    }
+    return 0;
+}
 
 struct nrex_search
 {
@@ -79,10 +131,6 @@ struct nrex_search
         {
         }
 };
-
-bool nrex_shorthand_test(nrex_char repr, nrex_char c)
-{
-}
 
 struct nrex_node
 {
@@ -276,6 +324,35 @@ struct nrex_node_range : public nrex_node
         }
 };
 
+static bool nrex_is_whitespace(nrex_char repr)
+{
+    switch (repr)
+    {
+        case NREX_STR(' '):
+        case NREX_STR('\t'):
+        case NREX_STR('\r'):
+        case NREX_STR('\n'):
+        case NREX_STR('\f'):
+            return true;
+    }
+    return false;
+}
+
+static bool nrex_is_shorthand(nrex_char repr)
+{
+    switch (repr)
+    {
+        case NREX_STR('W'):
+        case NREX_STR('w'):
+        case NREX_STR('D'):
+        case NREX_STR('d'):
+        case NREX_STR('S'):
+        case NREX_STR('s'):
+            return true;
+    }
+    return false;
+}
+
 struct nrex_node_shorthand : public nrex_node
 {
         nrex_char repr;
@@ -294,6 +371,7 @@ struct nrex_node_shorthand : public nrex_node
             }
             bool found = false;
             bool invert = false;
+            nrex_char c = s->at(pos);
             switch (repr)
             {
                 case NREX_STR('.'):
@@ -318,7 +396,7 @@ struct nrex_node_shorthand : public nrex_node
                 case NREX_STR('S'):
                     invert = true;
                 case NREX_STR('s'):
-                    if (whitespaces.find(c) != whitespaces.npos)
+                    if (nrex_is_whitespace(c))
                     {
                         found = true;
                     }
@@ -331,6 +409,19 @@ struct nrex_node_shorthand : public nrex_node
             return next ? next->test(s, pos + 1) : pos + 1;
         }
 };
+
+static bool nrex_is_quantifier(nrex_char repr)
+{
+    switch (repr)
+    {
+        case NREX_STR('?'):
+        case NREX_STR('*'):
+        case NREX_STR('+'):
+        case NREX_STR('{'):
+            return true;
+    }
+    return false;
+}
 
 struct nrex_node_quantifier : public nrex_node
 {
@@ -564,13 +655,13 @@ bool nrex::compile(const nrex_char* pattern)
                 }
                 else if (c[0] == NREX_STR('\\'))
                 {
-                    nrex_string::size_type pos = escapes.find(c[1]);
-                    if (pos != escapes.npos)
+                    nrex_char unescaped = nrex_unescape(c[1]);
+                    if (unescaped)
                     {
-                        group->add_child(new nrex_node_char(escaped_pairs.at(pos)));
+                        group->add_child(new nrex_node_char(unescaped));
                         ++c;
                     }
-                    else if (shorthands.find(c[1]) != shorthands.npos)
+                    else if (nrex_is_shorthand(c[1]))
                     {
                         group->add_child(new nrex_node_shorthand(c[1]));
                         ++c;
@@ -609,7 +700,7 @@ bool nrex::compile(const nrex_char* pattern)
 
             }
         }
-        else if (quantifiers.find(c[0]) != quantifiers.npos)
+        else if (nrex_is_quantifier(c[0]))
         {
             nrex_node_quantifier* quant = new nrex_node_quantifier;
             quant->child = stack.top()->swap_back(quant);
@@ -701,13 +792,13 @@ bool nrex::compile(const nrex_char* pattern)
         }
         else if (c[0] == NREX_STR('\\'))
         {
-            nrex_string::size_type pos = escapes.find(c[1]);
-            if (pos != escapes.npos)
+            nrex_char unescaped = nrex_unescape(c[1]);
+            if (unescaped)
             {
-                stack.top()->add_child(new nrex_node_char(escaped_pairs.at(pos)));
+                stack.top()->add_child(new nrex_node_char(unescaped));
                 ++c;
             }
-            else if (shorthands.find(c[1]) != shorthands.npos)
+            else if (nrex_is_shorthand(c[1]))
             {
                 stack.top()->add_child(new nrex_node_shorthand(c[1]));
                 ++c;
@@ -715,7 +806,7 @@ bool nrex::compile(const nrex_char* pattern)
             else if ('1' <= c[1] && c[1] <= '9')
             {
                 int ref = 0;
-                if ('0' <= c[1] && c[1] <= '9')
+                if ('0' <= c[2] && c[2] <= '9')
                 {
                     ref = int(c[1] - '0') * 10 + int(c[2] - '0');
                     c = &c[2];
@@ -738,8 +829,7 @@ bool nrex::compile(const nrex_char* pattern)
         }
         else
         {
-            nrex_node_char* next = new nrex_node_char(c[0]);
-            stack.top()->add_child(next);
+            stack.top()->add_child(new nrex_node_char(c[0]));
         }
     }
     return true;
