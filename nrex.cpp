@@ -620,7 +620,7 @@ void nrex::reset()
 
 int nrex::capture_size()
 {
-    return _capturing;
+    return _capturing + 1;
 }
 
 bool nrex::compile(const nrex_char* pattern)
