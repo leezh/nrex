@@ -68,6 +68,7 @@ struct nrex_search
         nrex_result_list& captures;
         int start;
         int end;
+        bool complete;
 
         nrex_char at(int pos)
         {
@@ -158,6 +159,10 @@ struct nrex_node
             {
                 pos = parent->test_parent(s, pos);
             }
+            if (pos >= 0)
+            {
+                s->complete = true;
+            }
             return pos;
         }
 };
@@ -194,7 +199,12 @@ struct nrex_node_group : public nrex_node
             std::vector<nrex_node*>::const_iterator it;
             for (it = childset.begin(); it != childset.end(); ++it)
             {
+                s->complete = false;
                 int res = (*it)->test(s, pos);
+                if (s->complete)
+                {
+                    return res;
+                }
                 if (res >= 0)
                 {
                     if (capturing >= 0)
@@ -405,6 +415,7 @@ struct nrex_node_quantifier : public nrex_node
         {
             std::stack<int> backtrack;
             backtrack.push(pos);
+            s->complete = false;
             while (backtrack.top() <= s->end)
             {
                 if (max >= 1 && backtrack.size() > (std::size_t)max)
@@ -418,12 +429,21 @@ struct nrex_node_quantifier : public nrex_node
                     {
                         res = next->test(s, res);
                     }
+                    if (s->complete)
+                    {
+                        return res;
+                    }
                     if (res >= 0 && parent->test_parent(s, res) >= 0)
                     {
                         return res;
                     }
                 }
+                s->complete = false;
                 int res = child->test(s, backtrack.top());
+                if (s->complete)
+                {
+                    return res;
+                }
                 if (res < 0 || res == backtrack.top())
                 {
                     break;
@@ -432,7 +452,12 @@ struct nrex_node_quantifier : public nrex_node
             }
             while (greedy && (std::size_t)min < backtrack.size())
             {
+                s->complete = false;
                 int res = backtrack.top();
+                if (s->complete)
+                {
+                    return res;
+                }
                 if (next)
                 {
                     res = next->test(s, res);
