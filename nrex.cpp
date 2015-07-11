@@ -31,8 +31,6 @@
 //  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "nrex.hpp"
-#include <stack>
-#include <bitset>
 
 #ifdef NREX_UNICODE
 #include <wctype.h>
@@ -40,6 +38,7 @@
 #define NREX_ISALPHANUM iswalnum
 #define NREX_STRLEN wcslen
 #else
+#include <ctype.h>
 #include <string.h>
 #define NREX_ISALPHANUM isalnum
 #define NREX_STRLEN strlen
@@ -50,6 +49,72 @@
 #else
 #define NREX_COMPILE_ERROR(M) reset(); return false
 #endif
+
+template<typename T>
+class nrex_array
+{
+    private:
+        T* _data;
+        unsigned int _reserved;
+        unsigned int _size;
+    public:
+        nrex_array()
+            : _data(new T[2])
+            , _reserved(2)
+            , _size(0)
+        {
+        }
+
+        ~nrex_array()
+        {
+            delete[] _data;
+        }
+
+        unsigned int size() const
+        {
+            return _size;
+        }
+
+        void reserve(unsigned int size)
+        {
+            T* old = _data;
+            _data = new T[size];
+            _reserved = size;
+            for (unsigned int i = 0; i < _size; ++i)
+            {
+                _data[i] = old[i];
+            }
+            delete[] old;
+        }
+
+        void push(T item)
+        {
+            if (_size == _reserved)
+            {
+                reserve(_reserved * 2);
+            }
+            _data[_size] = item;
+            _size++;
+        }
+
+        T& top()
+        {
+            return _data[_size - 1];
+        }
+
+        const T& operator[] (unsigned int i) const
+        {
+            return _data[i];
+        }
+
+        void pop()
+        {
+            if (_size > 0)
+            {
+                --_size;
+            }
+        }
+};
 
 static nrex_char nrex_unescape(nrex_char repr)
 {
@@ -113,7 +178,7 @@ struct nrex_search
 {
     public:
         const nrex_char* str;
-        nrex_result_list& captures;
+        nrex_result* captures;
         int start;
         int end;
         bool complete;
@@ -123,9 +188,9 @@ struct nrex_search
             return str[pos];
         }
 
-        nrex_search(const nrex_char* str, nrex_result_list& results)
+        nrex_search(const nrex_char* str, nrex_result* captures)
             : str(str)
-            , captures(results)
+            , captures(captures)
             , start(0)
             , end(0)
         {
@@ -182,7 +247,7 @@ struct nrex_node_group : public nrex_node
 {
         int capturing;
         bool negate;
-        std::vector<nrex_node*> childset;
+        nrex_array<nrex_node*> childset;
         nrex_node* back;
 
         nrex_node_group(int capturing)
@@ -195,10 +260,9 @@ struct nrex_node_group : public nrex_node
 
         virtual ~nrex_node_group()
         {
-            std::vector<nrex_node*>::iterator it;
-            for (it = childset.begin(); it != childset.end(); ++it)
+            for (unsigned int i = 0; i < childset.size(); ++i)
             {
-                delete *it;
+                delete childset[i];
             }
 
         }
@@ -209,11 +273,10 @@ struct nrex_node_group : public nrex_node
             {
                 s->captures[capturing].start = pos;
             }
-            std::vector<nrex_node*>::const_iterator it;
-            for (it = childset.begin(); it != childset.end(); ++it)
+            for (unsigned int i = 0; i < childset.size(); ++i)
             {
                 s->complete = false;
-                int res = (*it)->test(s, pos);
+                int res = childset[i]->test(s, pos);
                 if (s->complete)
                 {
                     return res;
@@ -254,7 +317,7 @@ struct nrex_node_group : public nrex_node
             }
             else
             {
-                childset.push_back(node);
+                childset.push(node);
             }
             back = node;
         }
@@ -269,7 +332,7 @@ struct nrex_node_group : public nrex_node
             nrex_node* old = back;
             if (!old->previous)
             {
-                childset.pop_back();
+                childset.pop();
             }
             back = old->previous;
             add_child(node);
@@ -449,16 +512,16 @@ struct nrex_node_quantifier : public nrex_node
 
         int test(nrex_search* s, int pos) const
         {
-            std::stack<int> backtrack;
+            nrex_array<int> backtrack;
             backtrack.push(pos);
             s->complete = false;
             while (backtrack.top() <= s->end)
             {
-                if (max >= 1 && backtrack.size() > (std::size_t)max)
+                if (max >= 1 && backtrack.size() > (unsigned int)max)
                 {
                     break;
                 }
-                if (!greedy && (std::size_t)min < backtrack.size())
+                if (!greedy && (unsigned int)min < backtrack.size())
                 {
                     int res = backtrack.top();
                     if (next)
@@ -486,7 +549,7 @@ struct nrex_node_quantifier : public nrex_node
                 }
                 backtrack.push(res);
             }
-            while (greedy && (std::size_t)min < backtrack.size())
+            while (greedy && (unsigned int) min < backtrack.size())
             {
                 s->complete = false;
                 int res = backtrack.top();
@@ -588,11 +651,16 @@ void nrex::reset()
     }
 }
 
+int nrex::capture_size()
+{
+    return _capturing;
+}
+
 bool nrex::compile(const nrex_char* pattern)
 {
     reset();
     nrex_node_group* root = new nrex_node_group(_capturing);
-    std::stack<nrex_node_group*> stack;
+    nrex_array<nrex_node_group*> stack;
     stack.push(root);
     _root = root;
 
@@ -835,10 +903,9 @@ bool nrex::compile(const nrex_char* pattern)
     return true;
 }
 
-bool nrex::match(const nrex_char* str, nrex_result_list& results, int start, int end) const
+bool nrex::match(const nrex_char* str, nrex_result* captures, int start, int end) const
 {
-    results.resize(_capturing + 1);
-    nrex_search s(str, results);
+    nrex_search s(str, captures);
     s.start = start;
     if (end >= 0)
     {
@@ -848,13 +915,12 @@ bool nrex::match(const nrex_char* str, nrex_result_list& results, int start, int
     {
         s.end = NREX_STRLEN(str);
     }
-    nrex_result_list::iterator res_it;
     for (int i = s.start; i < s.end; ++i)
     {
-        for (res_it = results.begin(); res_it != results.end(); ++res_it)
+        for (int c = 0; c <= _capturing; ++c)
         {
-            res_it->start = 0;
-            res_it->length = 0;
+            captures[c].start = 0;
+            captures[c].length = 0;
         }
         if (_root->test(&s, i) >= 0)
         {

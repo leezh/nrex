@@ -8,8 +8,8 @@ matchhing, not replacement. To use add the files `nrex.hpp` and
 	regex.compile("^(fo+)bar$");
 	std::string text = "foobar";
 
-	nrex_result_list captures;
-	if (regex.match(text, captures))
+	nrex_result captures[regex.capture_size()];
+	if (regex.match(text.c_str(), captures))
 	{
 		std::cout << text.substr(captures[0].start, captures[0].length);
 	}

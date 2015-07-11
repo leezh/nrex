@@ -16,13 +16,13 @@ int main()
 {
     nrex n;
     n.compile(TEST_CSTR("^f*?[a-f]+((\\w)\\2+)o(\\w*)bar$"));
-    nrex_result_list results;
+    nrex_result results[n.capture_size()];
     TEST_STR test = TEST_CSTR("ffffoooooo2000bar");
     n.match(test.c_str(), results);
     TEST_COUT << test << std::endl;
-    for (nrex_result_list::iterator it = results.begin(); it != results.end(); ++it)
+    for (int i = 0; i <= n.capture_size(); ++i)
     {
-        TEST_COUT << test.substr(it->start, it->length) << std::endl;
+        TEST_COUT << test.substr(results[i].start, results[i].length) << std::endl;
     }
     return 0;
 }

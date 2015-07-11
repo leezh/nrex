@@ -33,8 +33,6 @@
 #ifndef NREX_HPP
 #define NREX_HPP
 
-#include <vector>
-
 //#define NREX_UNICODE
 //#define NREX_THROW_ERROR
 
@@ -52,7 +50,6 @@ struct nrex_result
 };
 
 class nrex_node;
-typedef std::vector<nrex_result> nrex_result_list;
 
 class nrex
 {
@@ -64,8 +61,9 @@ class nrex
         ~nrex();
         void reset();
         bool valid();
+        int capture_size();
         bool compile(const nrex_char* pattern);
-        bool match(const nrex_char* str, nrex_result_list& results, int start = 0, int end = -1) const;
+        bool match(const nrex_char* str, nrex_result* captures, int start = 0, int end = -1) const;
 };
 
 #ifdef NREX_THROW_ERROR
