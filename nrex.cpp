@@ -82,39 +82,6 @@ struct nrex_search
 
 bool nrex_shorthand_test(nrex_char repr, nrex_char c)
 {
-    bool found = false;
-    bool invert = false;
-    switch (repr)
-    {
-        case NREX_STR('.'):
-            found = true;
-            break;
-        case NREX_STR('W'):
-            invert = true;
-        case NREX_STR('w'):
-            if (c == '_' || ISALPHANUM(c))
-            {
-                found = true;
-            }
-            break;
-        case NREX_STR('D'):
-            invert = true;
-        case NREX_STR('d'):
-            if ('0' <= c && c <= '9')
-            {
-                found = true;
-            }
-            break;
-        case NREX_STR('S'):
-            invert = true;
-        case NREX_STR('s'):
-            if (whitespaces.find(c) != whitespaces.npos)
-            {
-                found = true;
-            }
-            break;
-    }
-    return (found != invert);
 }
 
 struct nrex_node
@@ -309,11 +276,11 @@ struct nrex_node_range : public nrex_node
         }
 };
 
-struct nrex_node_shorthand_class : public nrex_node
+struct nrex_node_shorthand : public nrex_node
 {
         nrex_char repr;
 
-        nrex_node_shorthand_class(nrex_char c)
+        nrex_node_shorthand(nrex_char c)
             : nrex_node(true)
             , repr(c)
         {
@@ -321,7 +288,43 @@ struct nrex_node_shorthand_class : public nrex_node
 
         int test(nrex_search* s, int pos) const
         {
-            if (s->end == pos || !nrex_shorthand_test(repr, s->at(pos)))
+            if (s->end == pos)
+            {
+                return -1;
+            }
+            bool found = false;
+            bool invert = false;
+            switch (repr)
+            {
+                case NREX_STR('.'):
+                    found = true;
+                    break;
+                case NREX_STR('W'):
+                    invert = true;
+                case NREX_STR('w'):
+                    if (c == '_' || ISALPHANUM(c))
+                    {
+                        found = true;
+                    }
+                    break;
+                case NREX_STR('D'):
+                    invert = true;
+                case NREX_STR('d'):
+                    if ('0' <= c && c <= '9')
+                    {
+                        found = true;
+                    }
+                    break;
+                case NREX_STR('S'):
+                    invert = true;
+                case NREX_STR('s'):
+                    if (whitespaces.find(c) != whitespaces.npos)
+                    {
+                        found = true;
+                    }
+                    break;
+            }
+            if (found == invert)
             {
                 return -1;
             }
@@ -569,7 +572,7 @@ bool nrex::compile(const nrex_char* pattern)
                     }
                     else if (shorthands.find(c[1]) != shorthands.npos)
                     {
-                        group->add_child(new nrex_node_shorthand_class(c[1]));
+                        group->add_child(new nrex_node_shorthand(c[1]));
                         ++c;
                     }
                     else
@@ -694,7 +697,7 @@ bool nrex::compile(const nrex_char* pattern)
         }
         else if (c[0] == NREX_STR('.'))
         {
-            stack.top()->add_child(new nrex_node_shorthand_class('.'));
+            stack.top()->add_child(new nrex_node_shorthand('.'));
         }
         else if (c[0] == NREX_STR('\\'))
         {
@@ -706,7 +709,7 @@ bool nrex::compile(const nrex_char* pattern)
             }
             else if (shorthands.find(c[1]) != shorthands.npos)
             {
-                stack.top()->add_child(new nrex_node_shorthand_class(c[1]));
+                stack.top()->add_child(new nrex_node_shorthand(c[1]));
                 ++c;
             }
             else if ('1' <= c[1] && c[1] <= '9')
