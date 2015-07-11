@@ -51,12 +51,8 @@
 #define NREX_COMPILE_ERROR(M) reset(); return false
 #endif
 
-typedef nrex_string::value_type nrex_char;
 static const nrex_string escapes = NREX_STR("^$()[]\\.+*?-aefnrtv");
 static const nrex_string escaped_pairs = NREX_STR("^$()[]\\.+*?-\a\e\f\n\r\t\v");
-static const nrex_string numbers = NREX_STR("0123456789");
-static const nrex_string uppers = NREX_STR("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-static const nrex_string lowers = NREX_STR("abcdefghijklmnopqrstuvwxyz");
 static const nrex_string whitespaces = NREX_STR(" \t\r\n\f");
 static const nrex_string quantifiers = NREX_STR("+*?{");
 static const nrex_string shorthands = NREX_STR("wWsSdD");
@@ -104,7 +100,7 @@ bool nrex_shorthand_test(nrex_char repr, nrex_char c)
         case NREX_STR('D'):
             invert = true;
         case NREX_STR('d'):
-            if (numbers.find(c) != numbers.npos)
+            if ('0' <= c && c <= '9')
             {
                 found = true;
             }
@@ -170,12 +166,14 @@ struct nrex_node
 struct nrex_node_group : public nrex_node
 {
         int capturing;
+        bool negate;
         std::vector<nrex_node*> childset;
         nrex_node* back;
 
         nrex_node_group(int capturing)
             : nrex_node(true)
             , capturing(capturing)
+            , negate(false)
             , back(NULL)
         {
         }
@@ -205,7 +203,7 @@ struct nrex_node_group : public nrex_node
                 {
                     return res;
                 }
-                if (res >= 0)
+                if ((res >= 0) != negate)
                 {
                     if (capturing >= 0)
                     {
@@ -284,43 +282,16 @@ struct nrex_node_char : public nrex_node
         }
 };
 
-struct nrex_node_class : public nrex_node
+struct nrex_node_range : public nrex_node
 {
-        struct nrex_range
-        {
-                nrex_char start;
-                nrex_char end;
-                nrex_range(nrex_char s, nrex_char e)
-                    : start(s)
-                    , end(e)
-                {
-                }
-        };
+        nrex_char start;
+        nrex_char end;
 
-        nrex_string characters;
-        std::vector<nrex_char> shorthands;
-        std::vector<nrex_range> ranges;
-        bool negate;
-
-        nrex_node_class()
+        nrex_node_range(nrex_char s, nrex_char e)
             : nrex_node(true)
-            , negate(false)
+            , start(s)
+            , end(e)
         {
-        }
-
-        void add_char(nrex_char c)
-        {
-            characters.push_back(c);
-        }
-
-        void add_char_range(nrex_char start, nrex_char end)
-        {
-            ranges.push_back(nrex_range(start, end));
-        }
-
-        void add_shorthand(nrex_char c)
-        {
-            shorthands.push_back(c);
         }
 
         int test(nrex_search* s, int pos) const
@@ -330,36 +301,7 @@ struct nrex_node_class : public nrex_node
                 return -1;
             }
             nrex_char c = s->at(pos);
-            bool found = false;
-            if (characters.find(c) != characters.npos)
-            {
-                found = true;
-            }
-            else
-            {
-                std::vector<nrex_char>::const_iterator it;
-                for (it = shorthands.begin(); it != shorthands.end(); ++it)
-                {
-                    if (nrex_shorthand_test(*it, c))
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-            }
-            if (!found)
-            {
-                std::vector<nrex_range>::const_iterator it;
-                for (it = ranges.begin(); it != ranges.end(); ++it)
-                {
-                    if (it->start <= c && c <= it->end)
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-            }
-            if (found == negate)
+            if (c < start || end < c)
             {
                 return -1;
             }
@@ -552,7 +494,7 @@ void nrex::reset()
     }
 }
 
-bool nrex::compile(const nrex_string& pattern)
+bool nrex::compile(const nrex_char* pattern)
 {
     reset();
     nrex_node_group* root = new nrex_node_group(_capturing);
@@ -560,16 +502,15 @@ bool nrex::compile(const nrex_string& pattern)
     stack.push(root);
     _root = root;
 
-    nrex_string::const_iterator c;
-    for (c = pattern.begin(); c != pattern.end(); ++c)
+    for (const nrex_char* c = pattern; c[0] != '\0'; ++c)
     {
-        if (*c == NREX_STR('('))
+        if (c[0] == NREX_STR('('))
         {
-            if (*(c + 1) == NREX_STR('?'))
+            if (c[1] == NREX_STR('?'))
             {
-                if (*(c + 2) == NREX_STR(':'))
+                if (c[2] == NREX_STR(':'))
                 {
-                    c += 2;
+                    c = &c[2];
                     nrex_node_group* group = new nrex_node_group(-1);
                     stack.top()->add_child(group);
                     stack.push(group);
@@ -586,7 +527,7 @@ bool nrex::compile(const nrex_string& pattern)
                 stack.push(group);
             }
         }
-        else if (*c == NREX_STR(')'))
+        else if (c[0] == NREX_STR(')'))
         {
             if (stack.size() > 1)
             {
@@ -597,37 +538,38 @@ bool nrex::compile(const nrex_string& pattern)
                 NREX_COMPILE_ERROR("unexpected ')'");
             }
         }
-        else if (*c == NREX_STR('['))
+        else if (c[0] == NREX_STR('['))
         {
-            nrex_node_class* next = new nrex_node_class;
-            stack.top()->add_child(next);
-            if (*(c + 1) == NREX_STR('^'))
+            nrex_node_group* group = new nrex_node_group(-1);
+            stack.top()->add_child(group);
+            if (c[1] == NREX_STR('^'))
             {
-                next->negate = true;
+                group->negate = true;
                 ++c;
             }
             while (true)
             {
-                if (++c == pattern.end())
+                group->add_childset();
+                ++c;
+                if (c[0] == NREX_STR('\0'))
                 {
                     NREX_COMPILE_ERROR("unclosed character class '[]'");
                 }
-                if (*c == NREX_STR(']'))
+                if (c[0] == NREX_STR(']'))
                 {
                     break;
                 }
-                else if (*c == NREX_STR('\\'))
+                else if (c[0] == NREX_STR('\\'))
                 {
-                    nrex_char repr = *(c + 1);
-                    nrex_string::size_type pos = escapes.find(repr);
+                    nrex_string::size_type pos = escapes.find(c[1]);
                     if (pos != escapes.npos)
                     {
-                        next->add_char(escaped_pairs.at(pos));
+                        group->add_child(new nrex_node_char(escaped_pairs.at(pos)));
                         ++c;
                     }
-                    else if (shorthands.find(repr) != shorthands.npos)
+                    else if (shorthands.find(c[1]) != shorthands.npos)
                     {
-                        next->add_shorthand(repr);
+                        group->add_child(new nrex_node_shorthand_class(c[1]));
                         ++c;
                     }
                     else
@@ -637,48 +579,34 @@ bool nrex::compile(const nrex_string& pattern)
                 }
                 else
                 {
-                    if (uppers.find(*c) != uppers.npos)
+                    if (c[1] == NREX_STR('-') && c[2] != '\0')
                     {
-                        if (*(c + 1) == NREX_STR('-'))
+                        bool range = false;
+                        if ('A' <= c[0] && c[0] <= 'Z' && 'A' <= c[2] && c[2] <= 'Z')
                         {
-                            if (uppers.find(*(c + 2)) != uppers.npos)
-                            {
-                                next->add_char_range(*c, *(c + 2));
-                                c += 2;
-                                continue;
-                            }
+                            range = true;
+                        }
+                        if ('a' <= c[0] && c[0] <= 'z' && 'a' <= c[2] && c[2] <= 'z')
+                        {
+                            range = true;
+                        }
+                        if ('0' <= c[0] && c[0] <= '9' && '0' <= c[2] && c[2] <= '9')
+                        {
+                            range = true;
+                        }
+                        if (range)
+                        {
+                            group->add_child(new nrex_node_range(c[0], c[2]));
+                            c = &c[2];
+                            continue;
                         }
                     }
-                    if (lowers.find(*c) != lowers.npos)
-                    {
-                        if (*(c + 1) == NREX_STR('-'))
-                        {
-                            if (lowers.find(*(c + 2)) != lowers.npos)
-                            {
-                                next->add_char_range(*c, *(c + 2));
-                                c += 2;
-                                continue;
-                            }
-                        }
-                    }
-                    if (numbers.find(*c) != numbers.npos)
-                    {
-                        if (*(c + 1) == NREX_STR('-'))
-                        {
-                            if (numbers.find(*(c + 2)) != numbers.npos)
-                            {
-                                next->add_char_range(*c, *(c + 2));
-                                c += 2;
-                                continue;
-                            }
-                        }
-                    }
-                    next->add_char(*c);
+                    group->add_child(new nrex_node_char(c[0]));
                 }
 
             }
         }
-        else if (quantifiers.find(*c) != quantifiers.npos)
+        else if (quantifiers.find(c[0]) != quantifiers.npos)
         {
             nrex_node_quantifier* quant = new nrex_node_quantifier;
             quant->child = stack.top()->swap_back(quant);
@@ -689,43 +617,43 @@ bool nrex::compile(const nrex_string& pattern)
             quant->child->previous = NULL;
             quant->child->next = NULL;
             quant->child->parent = quant;
-            if (*c == NREX_STR('?'))
+            if (c[0] == NREX_STR('?'))
             {
                 quant->min = 0;
                 quant->max = 1;
             }
-            else if (*c == NREX_STR('+'))
+            else if (c[0] == NREX_STR('+'))
             {
                 quant->min = 1;
                 quant->max = -1;
             }
-            else if (*c == NREX_STR('*'))
+            else if (c[0] == NREX_STR('*'))
             {
                 quant->min = 0;
                 quant->max = -1;
             }
-            else if (*c == NREX_STR('{'))
+            else if (c[0] == NREX_STR('{'))
             {
                 bool max_set = false;
                 quant->min = 0;
                 quant->max = -1;
                 while (true)
                 {
-                    if (++c == pattern.end())
+                    ++c;
+                    if (c[0] == NREX_STR('\0'))
                     {
                         NREX_COMPILE_ERROR("unclosed range quantifier '{}'");
                     }
-                    else if (*c == NREX_STR('}'))
+                    else if (c[0] == NREX_STR('}'))
                     {
                         break;
                     }
-                    else if (*c == NREX_STR(','))
+                    else if (c[0] == NREX_STR(','))
                     {
                         max_set = true;
                         continue;
                     }
-                    std::size_t pos = numbers.find(*c);
-                    if (pos == numbers.npos)
+                    else if (c[0] < '0' || '9' < c[0])
                     {
                         NREX_COMPILE_ERROR("expected numeric digits, ',' or '}'");
                     }
@@ -733,16 +661,16 @@ bool nrex::compile(const nrex_string& pattern)
                     {
                         if (quant->max < 0)
                         {
-                            quant->max = int(pos);
+                            quant->max = int(c[0] - '0');
                         }
                         else
                         {
-                            quant->max = quant->max * 10 + int(pos);
+                            quant->max = quant->max * 10 + int(c[0] - '0');
                         }
                     }
                     else
                     {
-                        quant->min = quant->min * 10 + int(pos);
+                        quant->min = quant->min * 10 + int(c[0] - '0');
                     }
                 }
                 if (!max_set)
@@ -750,75 +678,64 @@ bool nrex::compile(const nrex_string& pattern)
                     quant->max = quant->min;
                 }
             }
-            if (*(c + 1) == NREX_STR('?'))
+            if (c[1] == NREX_STR('?'))
             {
                 quant->greedy = false;
                 ++c;
             }
         }
-        else if (*c == NREX_STR('|'))
+        else if (c[0] == NREX_STR('|'))
         {
             stack.top()->add_childset();
         }
-        else if (*c == NREX_STR('^') || *c == NREX_STR('$'))
+        else if (c[0] == NREX_STR('^') || c[0] == NREX_STR('$'))
         {
-            nrex_node_anchor* next = new nrex_node_anchor((*c == NREX_STR('$')));
-            stack.top()->add_child(next);
+            stack.top()->add_child(new nrex_node_anchor((c[0] == NREX_STR('$'))));
         }
-        else if (*c == NREX_STR('.'))
+        else if (c[0] == NREX_STR('.'))
         {
-            nrex_node_shorthand_class* next = new nrex_node_shorthand_class('.');
-            stack.top()->add_child(next);
+            stack.top()->add_child(new nrex_node_shorthand_class('.'));
         }
-        else if (*c == NREX_STR('\\'))
+        else if (c[0] == NREX_STR('\\'))
         {
-            nrex_char repr = *(c + 1);
-            nrex_string::size_type pos = escapes.find(repr);
+            nrex_string::size_type pos = escapes.find(c[1]);
             if (pos != escapes.npos)
             {
-                nrex_node_char* next = new nrex_node_char(escaped_pairs.at(pos));
-                stack.top()->add_child(next);
+                stack.top()->add_child(new nrex_node_char(escaped_pairs.at(pos)));
                 ++c;
             }
-            else if (shorthands.find(repr) != shorthands.npos)
+            else if (shorthands.find(c[1]) != shorthands.npos)
             {
-                nrex_node_shorthand_class* next = new nrex_node_shorthand_class(repr);
-                stack.top()->add_child(next);
+                stack.top()->add_child(new nrex_node_shorthand_class(c[1]));
                 ++c;
             }
-            else
+            else if ('1' <= c[1] && c[1] <= '9')
             {
-                pos = numbers.find(repr);
-                if (pos != numbers.npos && pos > 0)
+                int ref = 0;
+                if ('0' <= c[1] && c[1] <= '9')
                 {
-                    nrex_string::size_type pos2 = numbers.find(*(c + 2));
-                    int ref = 0;
-                    if (pos2 != numbers.npos)
-                    {
-                        ref = int(pos) * 10 + int(pos2);
-                        c += 2;
-                    }
-                    else
-                    {
-                        ref = int(pos);
-                        ++c;
-                    }
-                    if (ref > _capturing)
-                    {
-                        NREX_COMPILE_ERROR("backreference to non-existent capture");
-                    }
-                    nrex_node_backreference* next = new nrex_node_backreference(ref);
-                    stack.top()->add_child(next);
+                    ref = int(c[1] - '0') * 10 + int(c[2] - '0');
+                    c = &c[2];
                 }
                 else
                 {
-                    NREX_COMPILE_ERROR("escape token not recognised");
+                    ref = int(c[1] - '0');
+                    ++c;
                 }
+                if (ref > _capturing)
+                {
+                    NREX_COMPILE_ERROR("backreference to non-existent capture");
+                }
+                stack.top()->add_child(new nrex_node_backreference(ref));
+            }
+            else
+            {
+                NREX_COMPILE_ERROR("escape token not recognised");
             }
         }
         else
         {
-            nrex_node_char* next = new nrex_node_char(*c);
+            nrex_node_char* next = new nrex_node_char(c[0]);
             stack.top()->add_child(next);
         }
     }

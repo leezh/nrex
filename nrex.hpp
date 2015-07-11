@@ -55,6 +55,7 @@ struct nrex_result
 };
 
 class nrex_node;
+typedef nrex_string::value_type nrex_char;
 typedef std::vector<nrex_result> nrex_result_list;
 
 class nrex
@@ -67,7 +68,7 @@ class nrex
         ~nrex();
         void reset();
         bool valid();
-        bool compile(const nrex_string& pattern);
+        bool compile(const nrex_char* pattern);
         bool match(const nrex_string& str, nrex_result_list& results, int start = 0, int end = -1) const;
 };
 
