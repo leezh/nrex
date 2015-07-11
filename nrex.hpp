@@ -33,17 +33,16 @@
 #ifndef NREX_HPP
 #define NREX_HPP
 
-#include <string>
 #include <vector>
 
 //#define NREX_UNICODE
 //#define NREX_THROW_ERROR
 
 #ifdef NREX_UNICODE
-typedef std::wstring nrex_string;
+typedef wchar_t nrex_char;
 #define NREX_STR(X) L##X
 #else
-typedef std::string nrex_string;
+typedef char nrex_char;
 #define NREX_STR(X) X
 #endif
 
@@ -55,7 +54,6 @@ struct nrex_result
 };
 
 class nrex_node;
-typedef nrex_string::value_type nrex_char;
 typedef std::vector<nrex_result> nrex_result_list;
 
 class nrex
@@ -69,10 +67,11 @@ class nrex
         void reset();
         bool valid();
         bool compile(const nrex_char* pattern);
-        bool match(const nrex_string& str, nrex_result_list& results, int start = 0, int end = -1) const;
+        bool match(const nrex_char* str, nrex_result_list& results, int start = 0, int end = -1) const;
 };
 
 #ifdef NREX_THROW_ERROR
+#include <string>
 #include <stdexcept>
 
 class nrex_compile_error : std::runtime_error

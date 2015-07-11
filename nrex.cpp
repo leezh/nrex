@@ -35,14 +35,13 @@
 #include <bitset>
 
 #ifdef NREX_UNICODE
-#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 #include <wctype.h>
-#else
 #include <wchar.h>
-#endif
-#define ISALPHANUM iswalnum
+#define NREX_ISALPHANUM iswalnum
+#define NREX_STRLEN wcslen
 #else
-#define ISALPHANUM isalnum
+#define NREX_ISALPHANUM isalnum
+#define NREX_STRLEN strlen
 #endif
 
 #ifdef NREX_THROW_ERROR
@@ -112,7 +111,7 @@ static nrex_char nrex_unescape(nrex_char repr)
 struct nrex_search
 {
     public:
-        const nrex_string& str;
+        const nrex_char* str;
         nrex_result_list& captures;
         int start;
         int end;
@@ -120,14 +119,14 @@ struct nrex_search
 
         nrex_char at(int pos)
         {
-            return str.at(pos);
+            return str[pos];
         }
 
-        nrex_search(const nrex_string& str, nrex_result_list& results)
+        nrex_search(const nrex_char* str, nrex_result_list& results)
             : str(str)
             , captures(results)
             , start(0)
-            , end(str.length())
+            , end(0)
         {
         }
 };
@@ -380,7 +379,7 @@ struct nrex_node_shorthand : public nrex_node
                 case NREX_STR('W'):
                     invert = true;
                 case NREX_STR('w'):
-                    if (c == '_' || ISALPHANUM(c))
+                    if (c == '_' || NREX_ISALPHANUM(c))
                     {
                         found = true;
                     }
@@ -835,7 +834,7 @@ bool nrex::compile(const nrex_char* pattern)
     return true;
 }
 
-bool nrex::match(const nrex_string& str, nrex_result_list& results, int start, int end) const
+bool nrex::match(const nrex_char* str, nrex_result_list& results, int start, int end) const
 {
     results.resize(_capturing + 1);
     nrex_search s(str, results);
@@ -843,6 +842,10 @@ bool nrex::match(const nrex_string& str, nrex_result_list& results, int start, i
     if (end >= 0)
     {
         s.end = end;
+    }
+    else
+    {
+        s.end = NREX_STRLEN(str);
     }
     nrex_result_list::iterator res_it;
     for (int i = s.start; i < s.end; ++i)
