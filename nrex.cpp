@@ -120,56 +120,23 @@ static nrex_char nrex_unescape(nrex_char repr)
 {
     switch (repr)
     {
-        case '^':
-            return '^';
-
-        case '$':
-            return '$';
-
-        case '(':
-            return '(';
-
-        case ')':
-            return ')';
-
-        case '\\':
-            return '\\';
-
-        case '.':
-            return '.';
-
-        case '+':
-            return '+';
-
-        case '*':
-            return '*';
-
-        case '?':
-            return '?';
-
-        case '-':
-            return '-';
-
-        case 'a':
-            return '\a';
-
-        case 'e':
-            return '\e';
-
-        case 'f':
-            return '\f';
-
-        case 'n':
-            return '\n';
-
-        case 'r':
-            return '\r';
-
-        case 't':
-            return '\t';
-
-        case 'v':
-            return '\v';
+        case '^': return '^';
+        case '$': return '$';
+        case '(': return '(';
+        case ')': return ')';
+        case '\\': return '\\';
+        case '.': return '.';
+        case '+': return '+';
+        case '*': return '*';
+        case '?': return '?';
+        case '-': return '-';
+        case 'a': return '\a';
+        case 'e': return '\e';
+        case 'f': return '\f';
+        case 'n': return '\n';
+        case 'r': return '\r';
+        case 't': return '\t';
+        case 'v': return '\v';
     }
     return 0;
 }
