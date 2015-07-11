@@ -55,56 +55,56 @@ static nrex_char nrex_unescape(nrex_char repr)
 {
     switch (repr)
     {
-        case NREX_STR('^'):
-            return NREX_STR('^');
+        case '^':
+            return '^';
 
-        case NREX_STR('$'):
-            return NREX_STR('$');
+        case '$':
+            return '$';
 
-        case NREX_STR('('):
-            return NREX_STR('(');
+        case '(':
+            return '(';
 
-        case NREX_STR(')'):
-            return NREX_STR(')');
+        case ')':
+            return ')';
 
-        case NREX_STR('\\'):
-            return NREX_STR('\\');
+        case '\\':
+            return '\\';
 
-        case NREX_STR('.'):
-            return NREX_STR('.');
+        case '.':
+            return '.';
 
-        case NREX_STR('+'):
-            return NREX_STR('+');
+        case '+':
+            return '+';
 
-        case NREX_STR('*'):
-            return NREX_STR('*');
+        case '*':
+            return '*';
 
-        case NREX_STR('?'):
-            return NREX_STR('?');
+        case '?':
+            return '?';
 
-        case NREX_STR('-'):
-            return NREX_STR('-');
+        case '-':
+            return '-';
 
-        case NREX_STR('a'):
-            return NREX_STR('\a');
+        case 'a':
+            return '\a';
 
-        case NREX_STR('e'):
-            return NREX_STR('\e');
+        case 'e':
+            return '\e';
 
-        case NREX_STR('f'):
-            return NREX_STR('\f');
+        case 'f':
+            return '\f';
 
-        case NREX_STR('n'):
-            return NREX_STR('\n');
+        case 'n':
+            return '\n';
 
-        case NREX_STR('r'):
-            return NREX_STR('\r');
+        case 'r':
+            return '\r';
 
-        case NREX_STR('t'):
-            return NREX_STR('\t');
+        case 't':
+            return '\t';
 
-        case NREX_STR('v'):
-            return NREX_STR('\v');
+        case 'v':
+            return '\v';
     }
     return 0;
 }
@@ -328,11 +328,11 @@ static bool nrex_is_whitespace(nrex_char repr)
 {
     switch (repr)
     {
-        case NREX_STR(' '):
-        case NREX_STR('\t'):
-        case NREX_STR('\r'):
-        case NREX_STR('\n'):
-        case NREX_STR('\f'):
+        case ' ':
+        case '\t':
+        case '\r':
+        case '\n':
+        case '\f':
             return true;
     }
     return false;
@@ -342,12 +342,12 @@ static bool nrex_is_shorthand(nrex_char repr)
 {
     switch (repr)
     {
-        case NREX_STR('W'):
-        case NREX_STR('w'):
-        case NREX_STR('D'):
-        case NREX_STR('d'):
-        case NREX_STR('S'):
-        case NREX_STR('s'):
+        case 'W':
+        case 'w':
+        case 'D':
+        case 'd':
+        case 'S':
+        case 's':
             return true;
     }
     return false;
@@ -374,28 +374,28 @@ struct nrex_node_shorthand : public nrex_node
             nrex_char c = s->at(pos);
             switch (repr)
             {
-                case NREX_STR('.'):
+                case '.':
                     found = true;
                     break;
-                case NREX_STR('W'):
+                case 'W':
                     invert = true;
-                case NREX_STR('w'):
+                case 'w':
                     if (c == '_' || NREX_ISALPHANUM(c))
                     {
                         found = true;
                     }
                     break;
-                case NREX_STR('D'):
+                case 'D':
                     invert = true;
-                case NREX_STR('d'):
+                case 'd':
                     if ('0' <= c && c <= '9')
                     {
                         found = true;
                     }
                     break;
-                case NREX_STR('S'):
+                case 'S':
                     invert = true;
-                case NREX_STR('s'):
+                case 's':
                     if (nrex_is_whitespace(c))
                     {
                         found = true;
@@ -414,10 +414,10 @@ static bool nrex_is_quantifier(nrex_char repr)
 {
     switch (repr)
     {
-        case NREX_STR('?'):
-        case NREX_STR('*'):
-        case NREX_STR('+'):
-        case NREX_STR('{'):
+        case '?':
+        case '*':
+        case '+':
+        case '{':
             return true;
     }
     return false;
@@ -598,11 +598,11 @@ bool nrex::compile(const nrex_char* pattern)
 
     for (const nrex_char* c = pattern; c[0] != '\0'; ++c)
     {
-        if (c[0] == NREX_STR('('))
+        if (c[0] == '(')
         {
-            if (c[1] == NREX_STR('?'))
+            if (c[1] == '?')
             {
-                if (c[2] == NREX_STR(':'))
+                if (c[2] == ':')
                 {
                     c = &c[2];
                     nrex_node_group* group = new nrex_node_group(-1);
@@ -621,7 +621,7 @@ bool nrex::compile(const nrex_char* pattern)
                 stack.push(group);
             }
         }
-        else if (c[0] == NREX_STR(')'))
+        else if (c[0] == ')')
         {
             if (stack.size() > 1)
             {
@@ -632,11 +632,11 @@ bool nrex::compile(const nrex_char* pattern)
                 NREX_COMPILE_ERROR("unexpected ')'");
             }
         }
-        else if (c[0] == NREX_STR('['))
+        else if (c[0] == '[')
         {
             nrex_node_group* group = new nrex_node_group(-1);
             stack.top()->add_child(group);
-            if (c[1] == NREX_STR('^'))
+            if (c[1] == '^')
             {
                 group->negate = true;
                 ++c;
@@ -645,15 +645,15 @@ bool nrex::compile(const nrex_char* pattern)
             {
                 group->add_childset();
                 ++c;
-                if (c[0] == NREX_STR('\0'))
+                if (c[0] == '\0')
                 {
                     NREX_COMPILE_ERROR("unclosed character class '[]'");
                 }
-                if (c[0] == NREX_STR(']'))
+                if (c[0] == ']')
                 {
                     break;
                 }
-                else if (c[0] == NREX_STR('\\'))
+                else if (c[0] == '\\')
                 {
                     nrex_char unescaped = nrex_unescape(c[1]);
                     if (unescaped)
@@ -673,7 +673,7 @@ bool nrex::compile(const nrex_char* pattern)
                 }
                 else
                 {
-                    if (c[1] == NREX_STR('-') && c[2] != '\0')
+                    if (c[1] == '-' && c[2] != '\0')
                     {
                         bool range = false;
                         if ('A' <= c[0] && c[0] <= 'Z' && 'A' <= c[2] && c[2] <= 'Z')
@@ -711,22 +711,22 @@ bool nrex::compile(const nrex_char* pattern)
             quant->child->previous = NULL;
             quant->child->next = NULL;
             quant->child->parent = quant;
-            if (c[0] == NREX_STR('?'))
+            if (c[0] == '?')
             {
                 quant->min = 0;
                 quant->max = 1;
             }
-            else if (c[0] == NREX_STR('+'))
+            else if (c[0] == '+')
             {
                 quant->min = 1;
                 quant->max = -1;
             }
-            else if (c[0] == NREX_STR('*'))
+            else if (c[0] == '*')
             {
                 quant->min = 0;
                 quant->max = -1;
             }
-            else if (c[0] == NREX_STR('{'))
+            else if (c[0] == '{')
             {
                 bool max_set = false;
                 quant->min = 0;
@@ -734,15 +734,15 @@ bool nrex::compile(const nrex_char* pattern)
                 while (true)
                 {
                     ++c;
-                    if (c[0] == NREX_STR('\0'))
+                    if (c[0] == '\0')
                     {
                         NREX_COMPILE_ERROR("unclosed range quantifier '{}'");
                     }
-                    else if (c[0] == NREX_STR('}'))
+                    else if (c[0] == '}')
                     {
                         break;
                     }
-                    else if (c[0] == NREX_STR(','))
+                    else if (c[0] == ',')
                     {
                         max_set = true;
                         continue;
@@ -772,25 +772,25 @@ bool nrex::compile(const nrex_char* pattern)
                     quant->max = quant->min;
                 }
             }
-            if (c[1] == NREX_STR('?'))
+            if (c[1] == '?')
             {
                 quant->greedy = false;
                 ++c;
             }
         }
-        else if (c[0] == NREX_STR('|'))
+        else if (c[0] == '|')
         {
             stack.top()->add_childset();
         }
-        else if (c[0] == NREX_STR('^') || c[0] == NREX_STR('$'))
+        else if (c[0] == '^' || c[0] == '$')
         {
-            stack.top()->add_child(new nrex_node_anchor((c[0] == NREX_STR('$'))));
+            stack.top()->add_child(new nrex_node_anchor((c[0] == '$')));
         }
-        else if (c[0] == NREX_STR('.'))
+        else if (c[0] == '.')
         {
             stack.top()->add_child(new nrex_node_shorthand('.'));
         }
-        else if (c[0] == NREX_STR('\\'))
+        else if (c[0] == '\\')
         {
             nrex_char unescaped = nrex_unescape(c[1]);
             if (unescaped)

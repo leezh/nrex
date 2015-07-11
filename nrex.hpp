@@ -40,10 +40,8 @@
 
 #ifdef NREX_UNICODE
 typedef wchar_t nrex_char;
-#define NREX_STR(X) L##X
 #else
 typedef char nrex_char;
-#define NREX_STR(X) X
 #endif
 
 struct nrex_result
