@@ -649,9 +649,15 @@ bool nrex::compile(const nrex_char* pattern)
                     NREX_COMPILE_ERROR("unrecognised qualifier for parenthesis");
                 }
             }
-            else
+            else if (_capturing < 99)
             {
                 nrex_node_group* group = new nrex_node_group(++_capturing);
+                stack.top()->add_child(group);
+                stack.push(group);
+            }
+            else
+            {
+                nrex_node_group* group = new nrex_node_group(-1);
                 stack.top()->add_child(group);
                 stack.push(group);
             }

@@ -87,7 +87,8 @@ class nrex
          *
          * This is used to provide the array size of the captures needed for
          * nrex::match() to work. The size is actually the number of capture
-         * groups + one for the matching of the entire pattern.
+         * groups + one for the matching of the entire pattern. The result is
+         * always capped at 100.
          *
          * \return The number of captures
          */
@@ -114,7 +115,9 @@ class nrex
          * \param captures  The array of results to store the capture results.
          *                  The size of that array needs to be the same as the
          *                  size given in nrex::capture_size(). As it matches
-         *                  the function fills the array with the results.
+         *                  the function fills the array with the results. 0 is
+         *                  the result for the entire pattern, 1 and above
+         *                  corresponds to the regex capture group if present.
          * \param start     The starting point of the search. This also
          *                  determines the starting anchor.
          * \param end       The end point of the search. This also determines
