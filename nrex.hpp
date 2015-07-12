@@ -45,8 +45,7 @@ typedef char nrex_char;
 /*!
  * \brief Struct to contain the range of a capture result
  *
- * The range provided is relative to the begining of the string when searching
- * i.e. as if start was at 0.
+ * The range provided is relative to the begining of the searched string.
  *
  * \see nrex_node::match()
  */
