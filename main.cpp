@@ -20,7 +20,7 @@ int main()
     TEST_STR test = TEST_CSTR("ffffoooooo2000bar");
     n.match(test.c_str(), results);
     TEST_COUT << test << std::endl;
-    for (int i = 0; i <= n.capture_size(); ++i)
+    for (int i = 0; i < n.capture_size(); ++i)
     {
         TEST_COUT << test.substr(results[i].start, results[i].length) << std::endl;
     }
