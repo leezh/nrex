@@ -146,7 +146,6 @@ struct nrex_search
     public:
         const nrex_char* str;
         nrex_result* captures;
-        int start;
         int end;
         bool complete;
 
@@ -158,7 +157,6 @@ struct nrex_search
         nrex_search(const nrex_char* str, nrex_result* captures)
             : str(str)
             , captures(captures)
-            , start(0)
             , end(0)
         {
         }
@@ -550,7 +548,7 @@ struct nrex_node_anchor : public nrex_node
 
         int test(nrex_search* s, int pos) const
         {
-            if (!end && pos != s->start)
+            if (!end && pos != 0)
             {
                 return -1;
             }
@@ -876,11 +874,10 @@ bool nrex::compile(const nrex_char* pattern)
     return true;
 }
 
-bool nrex::match(const nrex_char* str, nrex_result* captures, int start, int end) const
+bool nrex::match(const nrex_char* str, nrex_result* captures, int offset, int end) const
 {
     nrex_search s(str, captures);
-    s.start = start;
-    if (end >= 0)
+    if (end >= offset)
     {
         s.end = end;
     }
@@ -888,7 +885,7 @@ bool nrex::match(const nrex_char* str, nrex_result* captures, int start, int end
     {
         s.end = NREX_STRLEN(str);
     }
-    for (int i = s.start; i < s.end; ++i)
+    for (int i = offset; i < s.end; ++i)
     {
         for (int c = 0; c <= _capturing; ++c)
         {

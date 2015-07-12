@@ -111,20 +111,24 @@ class nrex
 
         /*!
          * \brief Uses the pattern to search through the provided string
-         * \param str       The text to search through
+         * \param str       The text to search through. It only needs to be
+         *                  null terminated if the end point is not provided.
+         *                  This also determines the starting anchor.
          * \param captures  The array of results to store the capture results.
          *                  The size of that array needs to be the same as the
          *                  size given in nrex::capture_size(). As it matches
          *                  the function fills the array with the results. 0 is
          *                  the result for the entire pattern, 1 and above
          *                  corresponds to the regex capture group if present.
-         * \param start     The starting point of the search. This also
-         *                  determines the starting anchor.
+         * \param offset    The starting point of the search. This does not move
+         *                  the starting anchor. Defaults to 0.
          * \param end       The end point of the search. This also determines
-         *                  the ending anchor.
+         *                  the ending anchor. If a number less than the offset
+         *                  is provided, the search would be done until null
+         *                  termination. Defaults to -1.
          * \return          True if a match was found. False otherwise.
          */
-        bool match(const nrex_char* str, nrex_result* captures, int start = 0, int end = -1) const;
+        bool match(const nrex_char* str, nrex_result* captures, int offset = 0, int end = -1) const;
 };
 
 #ifdef NREX_THROW_ERROR
