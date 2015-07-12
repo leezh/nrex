@@ -42,15 +42,26 @@ typedef wchar_t nrex_char;
 typedef char nrex_char;
 #endif
 
+/*!
+ * \brief Struct to contain the range of a capture result
+ *
+ * The range provided is relative to the begining of the string when searching
+ * i.e. as if start was at 0.
+ *
+ * \see nrex_node::match()
+ */
 struct nrex_result
 {
     public:
-        int start;
-        int length;
+        int start; /*!< Start of text range */
+        int length; /*!< Length of text range */
 };
 
 class nrex_node;
 
+/*!
+ * \brief Holds the compiled regex pattern
+ */
 class nrex
 {
     private:
@@ -59,10 +70,57 @@ class nrex
     public:
         nrex();
         ~nrex();
+
+        /*!
+         * \brief Removes the compiled regex and frees up the memory
+         */
         void reset();
+
+        /*!
+         * \brief Checks if there is a compiled regex being stored
+         * \return True if present, False if not present
+         */
         bool valid();
+
+        /*!
+         * \brief Provides number of captures the compiled regex uses
+         *
+         * This is used to provide the array size of the captures needed for
+         * nrex::match() to work. The size is actually the number of capture
+         * groups + one for the matching of the entire pattern.
+         *
+         * \return The number of captures
+         */
         int capture_size();
+
+        /*!
+         * \brief Compiles the provided regex pattern
+         *
+         * This automatically removes the existing compiled regex if already
+         * present.
+         *
+         * If the NREX_THROW_ERROR was defined it would automatically throw a
+         * runtime error nrex_compile_error if it encounters a problem when
+         * parsing the pattern.
+         *
+         * \param The regex pattern
+         * \return True if the pattern was succesfully compiled
+         */
         bool compile(const nrex_char* pattern);
+
+        /*!
+         * \brief Uses the pattern to search through the provided string
+         * \param str       The text to search through
+         * \param captures  The array of results to store the capture results.
+         *                  The size of that array needs to be the same as the
+         *                  size given in nrex::capture_size(). As it matches
+         *                  the function fills the array with the results.
+         * \param start     The starting point of the search. This also
+         *                  determines the starting anchor.
+         * \param end       The end point of the search. This also determines
+         *                  the ending anchor.
+         * \return          True if a match was found. False otherwise.
+         */
         bool match(const nrex_char* str, nrex_result* captures, int start = 0, int end = -1) const;
 };
 
