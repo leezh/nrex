@@ -14,7 +14,7 @@ and `nrex_config.h` to your project and follow the example:
 		std::cout << captures[0].length << std::endl;
 	}
 
-More details about its use is documented in `hrex.hpp`
+More details about its use is documented in `nrex.hpp`
 
 Currently supported features:
  * Capturing `()` and non-capturing `(?:)` groups
