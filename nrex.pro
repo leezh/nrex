@@ -8,5 +8,6 @@ SOURCES += \
     nrex.cpp
 
 HEADERS += \
-    nrex.hpp
-
+    nrex.hpp \
+    nrex_config.godot.h \
+    nrex_config.h

@@ -50,6 +50,13 @@
 #define NREX_COMPILE_ERROR(M) reset(); return false
 #endif
 
+#ifndef NREX_NEW
+#define NREX_NEW(X) new X
+#define NREX_NEW_ARRAY(X, N) new X[N]
+#define NREX_DELETE(X) delete X
+#define NREX_DELETE_ARRAY(X) delete[] X
+#endif
+
 template<typename T>
 class nrex_array
 {

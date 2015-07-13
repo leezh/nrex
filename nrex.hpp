@@ -33,13 +33,7 @@
 #ifndef NREX_HPP
 #define NREX_HPP
 
-//#define NREX_UNICODE
-//#define NREX_THROW_ERROR
-
-#define NREX_NEW(X) new X
-#define NREX_NEW_ARRAY(X, N) new X[N]
-#define NREX_DELETE(X) delete X
-#define NREX_DELETE_ARRAY(X) delete[] X
+#include "nrex_config.h"
 
 #ifdef NREX_UNICODE
 typedef wchar_t nrex_char;
@@ -136,13 +130,13 @@ class nrex
 };
 
 #ifdef NREX_THROW_ERROR
-#include <string>
+
 #include <stdexcept>
 
 class nrex_compile_error : std::runtime_error
 {
     public:
-        nrex_compile_error(const std::string& message)
+        nrex_compile_error(const char* message)
             : std::runtime_error(message)
         {
         }
