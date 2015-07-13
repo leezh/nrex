@@ -36,6 +36,11 @@
 //#define NREX_UNICODE
 //#define NREX_THROW_ERROR
 
+#define NREX_NEW(X) new X
+#define NREX_NEW_ARRAY(X, N) new X[N]
+#define NREX_DELETE(X) delete X
+#define NREX_DELETE_ARRAY(X) delete[] X
+
 #ifdef NREX_UNICODE
 typedef wchar_t nrex_char;
 #else

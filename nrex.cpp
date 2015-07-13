@@ -59,7 +59,7 @@ class nrex_array
         unsigned int _size;
     public:
         nrex_array()
-            : _data(new T[2])
+            : _data(NREX_NEW_ARRAY(T, 2))
             , _reserved(2)
             , _size(0)
         {
@@ -67,7 +67,7 @@ class nrex_array
 
         ~nrex_array()
         {
-            delete[] _data;
+            NREX_DELETE_ARRAY(_data);
         }
 
         unsigned int size() const
@@ -78,13 +78,13 @@ class nrex_array
         void reserve(unsigned int size)
         {
             T* old = _data;
-            _data = new T[size];
+            _data = NREX_NEW_ARRAY(T, size);
             _reserved = size;
             for (unsigned int i = 0; i < _size; ++i)
             {
                 _data[i] = old[i];
             }
-            delete[] old;
+            NREX_DELETE_ARRAY(old);
         }
 
         void push(T item)
@@ -624,7 +624,7 @@ int nrex::capture_size()
 bool nrex::compile(const nrex_char* pattern)
 {
     reset();
-    nrex_node_group* root = new nrex_node_group(_capturing);
+    nrex_node_group* root = NREX_NEW(nrex_node_group(_capturing));
     nrex_array<nrex_node_group*> stack;
     stack.push(root);
     _root = root;
@@ -638,7 +638,7 @@ bool nrex::compile(const nrex_char* pattern)
                 if (c[2] == ':')
                 {
                     c = &c[2];
-                    nrex_node_group* group = new nrex_node_group(-1);
+                    nrex_node_group* group = NREX_NEW(nrex_node_group(-1));
                     stack.top()->add_child(group);
                     stack.push(group);
                 }
@@ -649,13 +649,13 @@ bool nrex::compile(const nrex_char* pattern)
             }
             else if (_capturing < 99)
             {
-                nrex_node_group* group = new nrex_node_group(++_capturing);
+                nrex_node_group* group = NREX_NEW(nrex_node_group(++_capturing));
                 stack.top()->add_child(group);
                 stack.push(group);
             }
             else
             {
-                nrex_node_group* group = new nrex_node_group(-1);
+                nrex_node_group* group = NREX_NEW(nrex_node_group(-1));
                 stack.top()->add_child(group);
                 stack.push(group);
             }
@@ -673,7 +673,7 @@ bool nrex::compile(const nrex_char* pattern)
         }
         else if (c[0] == '[')
         {
-            nrex_node_group* group = new nrex_node_group(-1);
+            nrex_node_group* group = NREX_NEW(nrex_node_group(-1));
             stack.top()->add_child(group);
             if (c[1] == '^')
             {
@@ -697,12 +697,12 @@ bool nrex::compile(const nrex_char* pattern)
                     nrex_char unescaped = nrex_unescape(c[1]);
                     if (unescaped)
                     {
-                        group->add_child(new nrex_node_char(unescaped));
+                        group->add_child(NREX_NEW(nrex_node_char(unescaped)));
                         ++c;
                     }
                     else if (nrex_is_shorthand(c[1]))
                     {
-                        group->add_child(new nrex_node_shorthand(c[1]));
+                        group->add_child(NREX_NEW(nrex_node_shorthand(c[1])));
                         ++c;
                     }
                     else
@@ -729,19 +729,19 @@ bool nrex::compile(const nrex_char* pattern)
                         }
                         if (range)
                         {
-                            group->add_child(new nrex_node_range(c[0], c[2]));
+                            group->add_child(NREX_NEW(nrex_node_range(c[0], c[2])));
                             c = &c[2];
                             continue;
                         }
                     }
-                    group->add_child(new nrex_node_char(c[0]));
+                    group->add_child(NREX_NEW(nrex_node_char(c[0])));
                 }
 
             }
         }
         else if (nrex_is_quantifier(c[0]))
         {
-            nrex_node_quantifier* quant = new nrex_node_quantifier;
+            nrex_node_quantifier* quant = NREX_NEW(nrex_node_quantifier);
             quant->child = stack.top()->swap_back(quant);
             if (quant->child == NULL || !quant->child->quantifiable)
             {
@@ -823,23 +823,23 @@ bool nrex::compile(const nrex_char* pattern)
         }
         else if (c[0] == '^' || c[0] == '$')
         {
-            stack.top()->add_child(new nrex_node_anchor((c[0] == '$')));
+            stack.top()->add_child(NREX_NEW(nrex_node_anchor((c[0] == '$'))));
         }
         else if (c[0] == '.')
         {
-            stack.top()->add_child(new nrex_node_shorthand('.'));
+            stack.top()->add_child(NREX_NEW(nrex_node_shorthand('.')));
         }
         else if (c[0] == '\\')
         {
             nrex_char unescaped = nrex_unescape(c[1]);
             if (unescaped)
             {
-                stack.top()->add_child(new nrex_node_char(unescaped));
+                stack.top()->add_child(NREX_NEW(nrex_node_char(unescaped)));
                 ++c;
             }
             else if (nrex_is_shorthand(c[1]))
             {
-                stack.top()->add_child(new nrex_node_shorthand(c[1]));
+                stack.top()->add_child(NREX_NEW(nrex_node_shorthand(c[1])));
                 ++c;
             }
             else if ('1' <= c[1] && c[1] <= '9')
@@ -859,7 +859,7 @@ bool nrex::compile(const nrex_char* pattern)
                 {
                     NREX_COMPILE_ERROR("backreference to non-existent capture");
                 }
-                stack.top()->add_child(new nrex_node_backreference(ref));
+                stack.top()->add_child(NREX_NEW(nrex_node_backreference(ref)));
             }
             else
             {
@@ -868,7 +868,7 @@ bool nrex::compile(const nrex_char* pattern)
         }
         else
         {
-            stack.top()->add_child(new nrex_node_char(c[0]));
+            stack.top()->add_child(NREX_NEW(nrex_node_char(c[0])));
         }
     }
     return true;
