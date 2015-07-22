@@ -609,7 +609,7 @@ nrex::~nrex()
     }
 }
 
-bool nrex::valid()
+bool nrex::valid() const
 {
     return (_root != NULL);
 }
@@ -623,7 +623,7 @@ void nrex::reset()
     }
 }
 
-int nrex::capture_size()
+int nrex::capture_size() const
 {
     return _capturing + 1;
 }
