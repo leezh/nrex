@@ -490,7 +490,6 @@ struct nrex_node_quantifier : public nrex_node
         {
             nrex_array<int> backtrack;
             backtrack.push(pos);
-            s->complete = false;
             while (backtrack.top() <= s->end)
             {
                 if (max >= 1 && backtrack.size() > (unsigned int)max)
@@ -513,7 +512,6 @@ struct nrex_node_quantifier : public nrex_node
                         return res;
                     }
                 }
-                s->complete = false;
                 int res = child->test(s, backtrack.top());
                 if (s->complete)
                 {
@@ -527,17 +525,16 @@ struct nrex_node_quantifier : public nrex_node
             }
             while (greedy && (unsigned int) min < backtrack.size())
             {
-                s->complete = false;
                 int res = backtrack.top();
-                if (s->complete)
-                {
-                    return res;
-                }
                 if (next)
                 {
                     res = next->test(s, res);
                 }
                 if (res >= 0 && parent->test_parent(s, res) >= 0)
+                {
+                    return res;
+                }
+                if (s->complete)
                 {
                     return res;
                 }

@@ -30,6 +30,7 @@ int main()
 {
     nrex n;
     test(n, TEST_CSTR("^f*?[a-f]+((\\w)\\2+)o(\\w*)bar$"), TEST_CSTR("ffffoooooo2000bar"));
-    test(n, TEST_CSTR("\"((?:\\\\.|[^\"])*)\""), TEST_CSTR("\"abc \\\" twas\""));
+    test(n, TEST_CSTR("\"((?:\\\\.|[^\"])*)\""), TEST_CSTR("\"And he said \\\"t'was great\\\"\""));
+    test(n, TEST_CSTR(":(?:\\s+<([^>]+)>)?\\s+(.*)"), TEST_CSTR(": <abc> def"));
     return 0;
 }
