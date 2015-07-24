@@ -12,17 +12,24 @@
 #define TEST_COUT std::cout
 #endif
 
-int main()
+void test(nrex& n, const nrex_char* exp, const TEST_STR& test)
 {
-    nrex n;
-    n.compile(TEST_CSTR("^f*?[a-f]+((\\w)\\2+)o(\\w*)bar$"));
+    n.compile(exp);
     nrex_result results[n.capture_size()];
-    TEST_STR test = TEST_CSTR("ffffoooooo2000bar");
     n.match(test.c_str(), results);
-    TEST_COUT << test << std::endl;
+    TEST_COUT << TEST_CSTR("Expression: ") << exp << std::endl;
+    TEST_COUT << TEST_CSTR("String: ") << test << std::endl;
     for (int i = 0; i < n.capture_size(); ++i)
     {
         TEST_COUT << test.substr(results[i].start, results[i].length) << std::endl;
     }
+    TEST_COUT << std::endl;
+}
+
+int main()
+{
+    nrex n;
+    test(n, TEST_CSTR("^f*?[a-f]+((\\w)\\2+)o(\\w*)bar$"), TEST_CSTR("ffffoooooo2000bar"));
+    test(n, TEST_CSTR("\"((?:\\\\.|[^\"])*)\""), TEST_CSTR("\"abc \\\" twas\""));
     return 0;
 }
