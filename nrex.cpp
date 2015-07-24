@@ -590,7 +590,7 @@ struct nrex_node_backreference : public nrex_node
 
 nrex::nrex()
     : _capturing(0)
-    , _root(0)
+    , _root(NULL)
 {
 }
 
@@ -614,6 +614,7 @@ void nrex::reset()
     {
         delete _root;
     }
+    _root = NULL;
 }
 
 int nrex::capture_size() const
