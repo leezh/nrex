@@ -246,7 +246,18 @@ struct nrex_node_group : public nrex_node
                 {
                     return res;
                 }
-                if ((res >= 0) != negate)
+                if (negate)
+                {
+                    if (res < 0)
+                    {
+                        res = pos + 1;
+                    }
+                    else
+                    {
+                        return -1;
+                    }
+                }
+                if (res >= 0)
                 {
                     if (capturing >= 0)
                     {
