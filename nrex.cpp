@@ -500,17 +500,45 @@ struct nrex_node_quantifier : public nrex_node
 
         int test(nrex_search* s, int pos) const
         {
-            nrex_array<int> backtrack;
-            backtrack.push(pos);
-            while (backtrack.top() <= s->end)
+            return test_step(s, pos, 1);
+        }
+
+        int test_step(nrex_search* s, int pos, int level) const
+        {
+            if ((max >= 1 && level > max) || pos > s->end)
             {
-                if (max >= 1 && backtrack.size() > (unsigned int)max)
+                return -1;
+            }
+            if (!greedy && level > min)
+            {
+                int res = pos;
+                if (next)
                 {
-                    break;
+                    res = next->test(s, res);
                 }
-                if (!greedy && (unsigned int)min < backtrack.size())
+                if (s->complete)
                 {
-                    int res = backtrack.top();
+                    return res;
+                }
+                if (res >= 0 && parent->test_parent(s, res) >= 0)
+                {
+                    return res;
+                }
+            }
+            int res = child->test(s, pos);
+            if (s->complete)
+            {
+                return res;
+            }
+            if (res >= 0)
+            {
+                int res_step = test_step(s, res, level + 1);
+                if (res_step >= 0)
+                {
+                    return res_step;
+                }
+                else if (greedy && level >= min)
+                {
                     if (next)
                     {
                         res = next->test(s, res);
@@ -524,33 +552,6 @@ struct nrex_node_quantifier : public nrex_node
                         return res;
                     }
                 }
-                int res = child->test(s, backtrack.top());
-                if (s->complete)
-                {
-                    return res;
-                }
-                if (res < 0 || res == backtrack.top())
-                {
-                    break;
-                }
-                backtrack.push(res);
-            }
-            while (greedy && (unsigned int) min < backtrack.size())
-            {
-                int res = backtrack.top();
-                if (next)
-                {
-                    res = next->test(s, res);
-                }
-                if (res >= 0 && parent->test_parent(s, res) >= 0)
-                {
-                    return res;
-                }
-                if (s->complete)
-                {
-                    return res;
-                }
-                backtrack.pop();
             }
             return -1;
         }
