@@ -869,7 +869,7 @@ int nrex::capture_size() const
     return _capturing + 1;
 }
 
-bool nrex::compile(const nrex_char* pattern)
+bool nrex::compile(const nrex_char* pattern, bool extended)
 {
     reset();
     nrex_node_group* root = NREX_NEW(nrex_node_group(_capturing));
@@ -903,7 +903,7 @@ bool nrex::compile(const nrex_char* pattern)
                     NREX_COMPILE_ERROR("unrecognised qualifier for group");
                 }
             }
-            else if (_capturing < 99)
+            else if ((!extended && _capturing < 9) || (extended && _capturing < 99))
             {
                 nrex_node_group* group = NREX_NEW(nrex_node_group(++_capturing));
                 stack.top()->add_child(group);
@@ -1165,7 +1165,7 @@ bool nrex::compile(const nrex_char* pattern)
             else if ('1' <= c[1] && c[1] <= '9')
             {
                 int ref = 0;
-                if ('0' <= c[2] && c[2] <= '9')
+                if (extended && '0' <= c[2] && c[2] <= '9')
                 {
                     ref = int(c[1] - '0') * 10 + int(c[2] - '0');
                     c = &c[2];
