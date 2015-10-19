@@ -326,6 +326,20 @@ struct nrex_node_group : public nrex_node
             add_child(node);
             return old;
         }
+
+        void pop_back()
+        {
+            if (back)
+            {
+                nrex_node* old = back;
+                if (!old->previous)
+                {
+                    childset.pop();
+                }
+                back = old->previous;
+                NREX_DELETE(old);
+            }
+        }
 };
 
 struct nrex_node_char : public nrex_node
@@ -886,7 +900,7 @@ bool nrex::compile(const nrex_char* pattern)
                 }
                 else
                 {
-                    NREX_COMPILE_ERROR("unrecognised qualifier for parenthesis");
+                    NREX_COMPILE_ERROR("unrecognised qualifier for group");
                 }
             }
             else if (_capturing < 99)
@@ -922,6 +936,9 @@ bool nrex::compile(const nrex_char* pattern)
                 group->negate = true;
                 ++c;
             }
+            bool first_child = true;
+            nrex_char previous_child;
+            bool previous_child_single = false;
             while (true)
             {
                 group->add_childset();
@@ -932,18 +949,22 @@ bool nrex::compile(const nrex_char* pattern)
                 }
                 if (c[0] == '[' && c[1] == ':')
                 {
-                    c = &c[2];
-                    nrex_class_type cls = nrex_parse_class(&c);
+                    const nrex_char* d = &c[2];
+                    nrex_class_type cls = nrex_parse_class(&d);
                     if (cls != nrex_class_none)
                     {
+                        c = d;
                         group->add_child(NREX_NEW(nrex_node_class(cls)));
+                        previous_child_single = false;
                     }
                     else
                     {
-                        NREX_COMPILE_ERROR("invalid class type '[:X:]'");
+                        group->add_child(NREX_NEW(nrex_node_char('[')));
+                        previous_child = '[';
+                        previous_child_single = true;
                     }
                 }
-                else if (c[0] == ']')
+                else if (c[0] == ']' && !first_child)
                 {
                     break;
                 }
@@ -954,121 +975,166 @@ bool nrex::compile(const nrex_char* pattern)
                     {
                         group->add_child(NREX_NEW(nrex_node_char(unescaped)));
                         ++c;
+                        previous_child = unescaped;
+                        previous_child_single = true;
                     }
                     else if (nrex_is_shorthand(c[1]))
                     {
                         group->add_child(NREX_NEW(nrex_node_shorthand(c[1])));
                         ++c;
+                        previous_child_single = false;
                     }
                     else
                     {
                         NREX_COMPILE_ERROR("escape token not recognised");
                     }
                 }
+                else if (previous_child_single && c[0] == '-')
+                {
+                    bool is_range = false;
+                    nrex_char next;
+                    if (c[1] != '\0' && c[1] != ']')
+                    {
+                        if (c[1] == '\\')
+                        {
+                            next = nrex_unescape(c[2]);
+                            if (!next)
+                            {
+                                NREX_COMPILE_ERROR("unsupported escape token in range");
+                            }
+                            c = &c[2];
+                        }
+                        else
+                        {
+                            next = c[1];
+                            ++c;
+                        }
+                        is_range = true;
+                    }
+                    if (is_range)
+                    {
+                        if (next < previous_child)
+                        {
+                            NREX_COMPILE_ERROR("text range out of order");
+                        }
+                        group->pop_back();
+                        group->add_child(NREX_NEW(nrex_node_range(previous_child, next)));
+                        previous_child_single = false;
+                    }
+                    else
+                    {
+                        group->add_child(NREX_NEW(nrex_node_char(c[0])));
+                        previous_child = c[0];
+                        previous_child_single = true;
+                    }
+                }
                 else
                 {
-                    if (c[1] == '-' && c[2] != '\0')
-                    {
-                        bool range = false;
-                        if ('A' <= c[0] && c[0] <= 'Z' && 'A' <= c[2] && c[2] <= 'Z')
-                        {
-                            range = true;
-                        }
-                        if ('a' <= c[0] && c[0] <= 'z' && 'a' <= c[2] && c[2] <= 'z')
-                        {
-                            range = true;
-                        }
-                        if ('0' <= c[0] && c[0] <= '9' && '0' <= c[2] && c[2] <= '9')
-                        {
-                            range = true;
-                        }
-                        if (range)
-                        {
-                            group->add_child(NREX_NEW(nrex_node_range(c[0], c[2])));
-                            c = &c[2];
-                            continue;
-                        }
-                    }
                     group->add_child(NREX_NEW(nrex_node_char(c[0])));
+                    previous_child = c[0];
+                    previous_child_single = true;
                 }
+                first_child = false;
             }
         }
         else if (nrex_is_quantifier(c[0]))
         {
-            nrex_node_quantifier* quant = NREX_NEW(nrex_node_quantifier);
-            quant->child = stack.top()->swap_back(quant);
-            if (quant->child == NULL || !quant->child->quantifiable)
+            if (stack.top()->back == NULL || !stack.top()->back->quantifiable)
             {
+                if (c[0] == '{')
+                {
+                    stack.top()->add_child(NREX_NEW(nrex_node_char('{')));
+                    continue;
+                }
                 NREX_COMPILE_ERROR("element not quantifiable");
             }
-            quant->child->previous = NULL;
-            quant->child->next = NULL;
-            quant->child->parent = quant;
+            int min = 0;
+            int max = -1;
+            bool valid_quantifier = true;
             if (c[0] == '?')
             {
-                quant->min = 0;
-                quant->max = 1;
+                min = 0;
+                max = 1;
             }
             else if (c[0] == '+')
             {
-                quant->min = 1;
-                quant->max = -1;
+                min = 1;
+                max = -1;
             }
             else if (c[0] == '*')
             {
-                quant->min = 0;
-                quant->max = -1;
+                min = 0;
+                max = -1;
             }
             else if (c[0] == '{')
             {
                 bool max_set = false;
-                quant->min = 0;
-                quant->max = -1;
+                const nrex_char* d = c;
                 while (true)
                 {
-                    ++c;
-                    if (c[0] == '\0')
+                    ++d;
+                    if (d[0] == '\0')
                     {
-                        NREX_COMPILE_ERROR("unclosed range quantifier '{}'");
+                        valid_quantifier = false;
+                        break;
                     }
-                    else if (c[0] == '}')
+                    else if (d[0] == '}')
                     {
                         break;
                     }
-                    else if (c[0] == ',')
+                    else if (d[0] == ',')
                     {
                         max_set = true;
                         continue;
                     }
-                    else if (c[0] < '0' || '9' < c[0])
+                    else if (d[0] < '0' || '9' < d[0])
                     {
-                        NREX_COMPILE_ERROR("expected numeric digits, ',' or '}'");
+                        valid_quantifier = false;
+                        break;
                     }
                     if (max_set)
                     {
-                        if (quant->max < 0)
+                        if (max < 0)
                         {
-                            quant->max = int(c[0] - '0');
+                            max = int(d[0] - '0');
                         }
                         else
                         {
-                            quant->max = quant->max * 10 + int(c[0] - '0');
+                            max = max * 10 + int(d[0] - '0');
                         }
                     }
                     else
                     {
-                        quant->min = quant->min * 10 + int(c[0] - '0');
+                        min = min * 10 + int(d[0] - '0');
                     }
                 }
                 if (!max_set)
                 {
-                    quant->max = quant->min;
+                    max = min;
+                }
+                if (valid_quantifier)
+                {
+                    c = d;
                 }
             }
-            if (c[1] == '?')
+            if (valid_quantifier)
             {
-                quant->greedy = false;
-                ++c;
+                nrex_node_quantifier* quant = NREX_NEW(nrex_node_quantifier);
+                quant->child = stack.top()->swap_back(quant);
+                quant->child->previous = NULL;
+                quant->child->next = NULL;
+                quant->child->parent = quant;
+                quant->min = min;
+                quant->max = max;
+                if (c[1] == '?')
+                {
+                    quant->greedy = false;
+                    ++c;
+                }
+            }
+            else
+            {
+                stack.top()->add_child(NREX_NEW(nrex_node_char(c[0])));
             }
         }
         else if (c[0] == '|')
@@ -1124,6 +1190,10 @@ bool nrex::compile(const nrex_char* pattern)
         {
             stack.top()->add_child(NREX_NEW(nrex_node_char(c[0])));
         }
+    }
+    if (stack.size() > 1)
+    {
+        NREX_COMPILE_ERROR("unclosed group '('");
     }
     return true;
 }
