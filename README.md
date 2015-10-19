@@ -27,6 +27,7 @@ Currently supported features:
  * Begining `^` and end `$` anchors
  * Alternation `|`
  * Backreferences `\1` to `\99`
+ * Positive `(?=)` and negative `(?!)` lookahead
 
 To do list:
  * Unicode `\uFFFF` code points

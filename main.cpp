@@ -32,5 +32,8 @@ int main()
     test(n, TEST_CSTR("^f*?[a-f]+((\\w)\\2+)o(\\w*)bar$"), TEST_CSTR("ffffoooooo2000bar"));
     test(n, TEST_CSTR("\"((?:\\\\.|[^\"])*)\""), TEST_CSTR("\"And he said \\\"t'was great\\\"\""));
     test(n, TEST_CSTR(":(?:\\s+<([^>]+)>)?\\s+(.*)"), TEST_CSTR(": <abc> def"));
+    test(n, TEST_CSTR("a.(?!b|c)"), TEST_CSTR("a1b a2c a3d"));
+    test(n, TEST_CSTR("a.(?=c)"), TEST_CSTR("a1b a2c a3d"));
+    test(n, TEST_CSTR("a[^bc]"), TEST_CSTR("ab ac ad"));
     return 0;
 }
