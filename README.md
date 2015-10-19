@@ -18,9 +18,10 @@ More details about its use is documented in `nrex.hpp`
 
 Currently supported features:
  * Capturing `()` and non-capturing `(?:)` groups
- * Any character `.`
+ * Any character `.` (includes newlines)
  * Shorthand caracter classes `\w\W\s\S\d\D`
- * User-defined character classes such as `[A-Za-z]`
+ * POSIX character classes such as `[[:alnum:]]`
+ * Bracket expressions such as `[A-Za-z]`
  * Simple quantifiers `?`, `*` and `+`
  * Range quantifiers `{0,1}`
  * Lazy (non-greedy) quantifiers `*?`

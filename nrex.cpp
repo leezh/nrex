@@ -211,7 +211,7 @@ struct nrex_node
 struct nrex_node_group : public nrex_node
 {
         static const int NonCapture = -1;
-        static const int Class = -2;
+        static const int Bracket = -2;
         static const int LookAhead = -3;
 
         int mode;
@@ -388,6 +388,218 @@ static bool nrex_is_whitespace(nrex_char repr)
     }
     return false;
 }
+
+static bool nrex_is_punctuation(nrex_char repr)
+{
+    switch (repr)
+    {
+        case ']':
+        case '[':
+        case '!':
+        case '"':
+        case '#':
+        case '$':
+        case '%':
+        case '&':
+        case '\'':
+        case '(':
+        case ')':
+        case '*':
+        case '+':
+        case ',':
+        case '.':
+        case '/':
+        case ':':
+        case ';':
+        case '<':
+        case '=':
+        case '>':
+        case '?':
+        case '@':
+        case '\\':
+        case '^':
+        case '_':
+        case '`':
+        case '{':
+        case '|':
+        case '}':
+        case '~':
+        case '-':
+            return true;
+    }
+    return false;
+}
+
+enum nrex_class_type
+{
+    nrex_class_none,
+    nrex_class_alnum,
+    nrex_class_alpha,
+    nrex_class_blank,
+    nrex_class_cntrl,
+    nrex_class_digit,
+    nrex_class_graph,
+    nrex_class_lower,
+    nrex_class_print,
+    nrex_class_punct,
+    nrex_class_space,
+    nrex_class_upper,
+    nrex_class_xdigit,
+    nrex_class_word
+};
+
+static bool nrex_compare_class(const nrex_char** pos, const char* text)
+{
+    unsigned int i = 0;
+    for (i = 0; text[i] != '\0'; ++i)
+    {
+        if ((*pos)[i] != text[i])
+        {
+            return false;
+        }
+    }
+    if ((*pos)[i++] != ':' || (*pos)[i] != ']')
+    {
+        return false;
+    }
+    *pos = &(*pos)[i];
+    return true;
+}
+
+#define NREX_COMPARE_CLASS(POS, NAME) if (nrex_compare_class(POS, #NAME)) return nrex_class_ ## NAME
+
+static nrex_class_type nrex_parse_class(const nrex_char** pos)
+{
+    NREX_COMPARE_CLASS(pos, alnum);
+    NREX_COMPARE_CLASS(pos, alpha);
+    NREX_COMPARE_CLASS(pos, blank);
+    NREX_COMPARE_CLASS(pos, cntrl);
+    NREX_COMPARE_CLASS(pos, digit);
+    NREX_COMPARE_CLASS(pos, graph);
+    NREX_COMPARE_CLASS(pos, lower);
+    NREX_COMPARE_CLASS(pos, print);
+    NREX_COMPARE_CLASS(pos, punct);
+    NREX_COMPARE_CLASS(pos, space);
+    NREX_COMPARE_CLASS(pos, upper);
+    NREX_COMPARE_CLASS(pos, xdigit);
+    NREX_COMPARE_CLASS(pos, word);
+    return nrex_class_none;
+}
+
+struct nrex_node_class : public nrex_node
+{
+        nrex_class_type type;
+
+        nrex_node_class(nrex_class_type t)
+            : nrex_node(true)
+            , type(t)
+        {
+        }
+
+        int test(nrex_search* s, int pos) const
+        {
+            if (s->end == pos)
+            {
+                return -1;
+            }
+            if (!test_class(s->at(pos)))
+            {
+                return -1;
+            }
+            return next ? next->test(s, pos + 1) : pos + 1;
+        }
+
+        bool test_class(nrex_char c) const
+        {
+            if ((0 <= c && c <= 0x1F) || c == 0x7F)
+            {
+                if (type == nrex_class_cntrl)
+                {
+                    return true;
+                }
+            }
+            else if (c < 0x7F)
+            {
+                if (type == nrex_class_print)
+                {
+                    return true;
+                }
+                else if (type == nrex_class_graph && c != ' ')
+                {
+                    return true;
+                }
+                else if ('0' <= c && c <= '9')
+                {
+                    switch (type)
+                    {
+                        case nrex_class_alnum:
+                        case nrex_class_digit:
+                        case nrex_class_xdigit:
+                            return true;
+                        default:
+                            break;
+                    }
+                }
+                else if ('A' <= c && c <= 'Z')
+                {
+                    switch (type)
+                    {
+                        case nrex_class_alnum:
+                        case nrex_class_alpha:
+                        case nrex_class_upper:
+                            return true;
+                        case nrex_class_xdigit:
+                            if (c <= 'F')
+                            {
+                                return true;
+                            }
+                        default:
+                            break;
+                    }
+                }
+                else if ('a' <= c && c <= 'z')
+                {
+                    switch (type)
+                    {
+                        case nrex_class_alnum:
+                        case nrex_class_alpha:
+                        case nrex_class_lower:
+                            return true;
+                        case nrex_class_xdigit:
+                            if (c <= 'f')
+                            {
+                                return true;
+                            }
+                        default:
+                            break;
+                    }
+                }
+            }
+            if (nrex_is_whitespace(c))
+            {
+                switch (type)
+                {
+                    case nrex_class_space:
+                        return true;
+                    case nrex_class_blank:
+                        if (c == ' ' || c == '\t')
+                        {
+                            return true;
+                        }
+                    default:
+                        break;
+                }
+            }
+            else if (nrex_is_punctuation(c))
+            {
+                if (type == nrex_class_punct)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+};
 
 static bool nrex_is_shorthand(nrex_char repr)
 {
@@ -703,7 +915,7 @@ bool nrex::compile(const nrex_char* pattern)
         }
         else if (c[0] == '[')
         {
-            nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_node_group::Class));
+            nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_node_group::Bracket));
             stack.top()->add_child(group);
             if (c[1] == '^')
             {
@@ -716,9 +928,22 @@ bool nrex::compile(const nrex_char* pattern)
                 ++c;
                 if (c[0] == '\0')
                 {
-                    NREX_COMPILE_ERROR("unclosed character class '[]'");
+                    NREX_COMPILE_ERROR("unclosed bracket expression '['");
                 }
-                if (c[0] == ']')
+                if (c[0] == '[' && c[1] == ':')
+                {
+                    c = &c[2];
+                    nrex_class_type cls = nrex_parse_class(&c);
+                    if (cls != nrex_class_none)
+                    {
+                        group->add_child(NREX_NEW(nrex_node_class(cls)));
+                    }
+                    else
+                    {
+                        NREX_COMPILE_ERROR("invalid class type '[:X:]'");
+                    }
+                }
+                else if (c[0] == ']')
                 {
                     break;
                 }
@@ -766,7 +991,6 @@ bool nrex::compile(const nrex_char* pattern)
                     }
                     group->add_child(NREX_NEW(nrex_node_char(c[0])));
                 }
-
             }
         }
         else if (nrex_is_quantifier(c[0]))
