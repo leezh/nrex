@@ -837,6 +837,44 @@ struct nrex_node_anchor : public nrex_node
         }
 };
 
+struct nrex_node_word_boundary : public nrex_node
+{
+        bool inverse;
+
+        nrex_node_word_boundary(bool inverse)
+            : nrex_node()
+            , inverse(inverse)
+        {
+        }
+
+        int test(nrex_search* s, int pos) const
+        {
+            bool left = false;
+            bool right = false;
+            if (pos != 0)
+            {
+                nrex_char c = s->at(pos - 1);
+                if (c == '_' || NREX_ISALPHANUM(c))
+                {
+                    left = true;
+                }
+            }
+            if (pos != s->end)
+            {
+                nrex_char c = s->at(pos);
+                if (c == '_' || NREX_ISALPHANUM(c))
+                {
+                    right = true;
+                }
+            }
+            if ((left != right) == inverse)
+            {
+                return -1;
+            }
+            return next ? next->test(s, pos) : pos;
+        }
+};
+
 struct nrex_node_backreference : public nrex_node
 {
         int ref;
@@ -1205,6 +1243,11 @@ bool nrex::compile(const nrex_char* pattern, bool extended)
                     NREX_COMPILE_ERROR("backreference to non-existent capture");
                 }
                 stack.top()->add_child(NREX_NEW(nrex_node_backreference(ref)));
+            }
+            else if (c[1] == 'b' || c[1] == 'B')
+            {
+                stack.top()->add_child(NREX_NEW(nrex_node_word_boundary(c[1] == 'B')));
+                ++c;
             }
             else
             {

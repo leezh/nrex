@@ -26,6 +26,7 @@ Currently supported features:
  * Range quantifiers `{0,1}`
  * Lazy (non-greedy) quantifiers `*?`
  * Begining `^` and end `$` anchors
+ * Word boundaries `\b`
  * Alternation `|`
  * ASCII `\xFF` code points
  * Unicode `\uFFFF` code points

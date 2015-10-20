@@ -38,5 +38,6 @@ int main()
     test(n, TEST_CSTR("a{r}"), TEST_CSTR("ba{r}"));
     test(n, TEST_CSTR("[[:xdigit:]]{5}\\x20\\u0046"), TEST_CSTR("x09afA F"));
     test(n, TEST_CSTR("[[:alnu]{5}"), TEST_CSTR("laun:dry"));
+    test(n, TEST_CSTR("\\bab.\\b"), TEST_CSTR("ab1c ab2 ab3"));
     return 0;
 }
