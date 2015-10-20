@@ -29,11 +29,13 @@
 #include <wctype.h>
 #include <wchar.h>
 #define NREX_ISALPHANUM iswalnum
+#define NREX_ISSPACE iswspace
 #define NREX_STRLEN wcslen
 #else
 #include <ctype.h>
 #include <string.h>
 #define NREX_ISALPHANUM isalnum
+#define NREX_ISSPACE isspace
 #define NREX_STRLEN strlen
 #endif
 
@@ -389,61 +391,6 @@ struct nrex_node_range : public nrex_node
         }
 };
 
-static bool nrex_is_whitespace(nrex_char repr)
-{
-    switch (repr)
-    {
-        case ' ':
-        case '\t':
-        case '\r':
-        case '\n':
-        case '\f':
-            return true;
-    }
-    return false;
-}
-
-static bool nrex_is_punctuation(nrex_char repr)
-{
-    switch (repr)
-    {
-        case ']':
-        case '[':
-        case '!':
-        case '"':
-        case '#':
-        case '$':
-        case '%':
-        case '&':
-        case '\'':
-        case '(':
-        case ')':
-        case '*':
-        case '+':
-        case ',':
-        case '.':
-        case '/':
-        case ':':
-        case ';':
-        case '<':
-        case '=':
-        case '>':
-        case '?':
-        case '@':
-        case '\\':
-        case '^':
-        case '_':
-        case '`':
-        case '{':
-        case '|':
-        case '}':
-        case '~':
-        case '-':
-            return true;
-    }
-    return false;
-}
-
 enum nrex_class_type
 {
     nrex_class_none,
@@ -549,6 +496,7 @@ struct nrex_node_class : public nrex_node
                         case nrex_class_alnum:
                         case nrex_class_digit:
                         case nrex_class_xdigit:
+                        case nrex_class_word:
                             return true;
                         default:
                             break;
@@ -561,6 +509,7 @@ struct nrex_node_class : public nrex_node
                         case nrex_class_alnum:
                         case nrex_class_alpha:
                         case nrex_class_upper:
+                        case nrex_class_word:
                             return true;
                         case nrex_class_xdigit:
                             if (c <= 'F')
@@ -578,6 +527,7 @@ struct nrex_node_class : public nrex_node
                         case nrex_class_alnum:
                         case nrex_class_alpha:
                         case nrex_class_lower:
+                        case nrex_class_word:
                             return true;
                         case nrex_class_xdigit:
                             if (c <= 'f')
@@ -589,27 +539,65 @@ struct nrex_node_class : public nrex_node
                     }
                 }
             }
-            if (nrex_is_whitespace(c))
+            switch (c)
             {
-                switch (type)
-                {
-                    case nrex_class_space:
+                case ' ':
+                case '\t':
+                    if (type == nrex_class_blank)
+                    {
                         return true;
-                    case nrex_class_blank:
-                        if (c == ' ' || c == '\t')
-                        {
-                            return true;
-                        }
-                    default:
-                        break;
-                }
-            }
-            else if (nrex_is_punctuation(c))
-            {
-                if (type == nrex_class_punct)
-                {
-                    return true;
-                }
+                    }
+                case '\r':
+                case '\n':
+                case '\f':
+                    if (type == nrex_class_space)
+                    {
+                        return true;
+                    }
+                    break;
+                case '_':
+                    if (type == nrex_class_word)
+                    {
+                        return true;
+                    }
+                case ']':
+                case '[':
+                case '!':
+                case '"':
+                case '#':
+                case '$':
+                case '%':
+                case '&':
+                case '\'':
+                case '(':
+                case ')':
+                case '*':
+                case '+':
+                case ',':
+                case '.':
+                case '/':
+                case ':':
+                case ';':
+                case '<':
+                case '=':
+                case '>':
+                case '?':
+                case '@':
+                case '\\':
+                case '^':
+                case '`':
+                case '{':
+                case '|':
+                case '}':
+                case '~':
+                case '-':
+                    if (type == nrex_class_punct)
+                    {
+                        return true;
+                    }
+                    break;
+                default:
+                    break;
             }
             return false;
         }
@@ -673,7 +661,7 @@ struct nrex_node_shorthand : public nrex_node
                 case 'S':
                     invert = true;
                 case 's':
-                    if (nrex_is_whitespace(c))
+                    if (NREX_ISSPACE(c))
                     {
                         found = true;
                     }
