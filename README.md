@@ -31,6 +31,7 @@ Currently supported features:
  * ASCII `\xFF` code points
  * Unicode `\uFFFF` code points
  * Positive `(?=)` and negative `(?!)` lookahead
+ * Positive `(?<=)` and negative `(?<!)` lookbehind (fixed length and no alternations)
  * Backreferences `\1` to `\9` (with option to expand to `\99`)
 
 ## License
