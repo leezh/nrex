@@ -27,11 +27,10 @@ Currently supported features:
  * Lazy (non-greedy) quantifiers `*?`
  * Begining `^` and end `$` anchors
  * Alternation `|`
- * Backreferences `\1` to `\99`
- * Positive `(?=)` and negative `(?!)` lookahead
-
-To do list:
+ * ASCII `\xFF` code points
  * Unicode `\uFFFF` code points
+ * Positive `(?=)` and negative `(?!)` lookahead
+ * Backreferences `\1` to `\9` (with option to expand to `\99`)
 
 ## License
 

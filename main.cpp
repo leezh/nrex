@@ -29,14 +29,14 @@ void test(nrex& n, const nrex_char* exp, const TEST_STR& test)
 int main()
 {
     nrex n;
-    test(n, TEST_CSTR("^f*?[a-f]+((\\w)\\2+)o(\\w*)bar$"), TEST_CSTR("ffffoooooo2000bar"));
+    //test(n, TEST_CSTR("^f*?[a-f]+((\\w)\\2+)o(\\w*)bar$"), TEST_CSTR("ffffoooooo2000bar"));
     test(n, TEST_CSTR("\"((?:\\\\.|[^\"])*)\""), TEST_CSTR("\"And he said \\\"t'was great\\\"\""));
     test(n, TEST_CSTR(":(?:\\s+<([^>]+)>)?\\s+(.*)"), TEST_CSTR(": <abc> def"));
     test(n, TEST_CSTR("a.(?!b|c)"), TEST_CSTR("a1b a2c a3d"));
     test(n, TEST_CSTR("a.(?=c)"), TEST_CSTR("a1b a2c a3d"));
     test(n, TEST_CSTR("a[^bc]"), TEST_CSTR("ab ac ad"));
     test(n, TEST_CSTR("a{r}"), TEST_CSTR("ba{r}"));
-    test(n, TEST_CSTR("[[:xdigit:]]{5}"), TEST_CSTR("x09afAF+1"));
+    test(n, TEST_CSTR("[[:xdigit:]]{5}\\x20\\u0046"), TEST_CSTR("x09afA F"));
     test(n, TEST_CSTR("[[:alnu]{5}"), TEST_CSTR("laun:dry"));
     return 0;
 }

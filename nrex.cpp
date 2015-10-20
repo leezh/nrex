@@ -118,34 +118,72 @@ class nrex_array
         }
 };
 
-static nrex_char nrex_unescape(nrex_char repr)
+static int nrex_parse_hex(nrex_char c)
 {
-    switch (repr)
+    if ('0' <= c && c <= '9')
     {
-        case '^': return '^';
-        case '$': return '$';
-        case '(': return '(';
-        case ')': return ')';
-        case '\\': return '\\';
-        case '.': return '.';
-        case '+': return '+';
-        case '*': return '*';
-        case '?': return '?';
-        case '-': return '-';
-        case 'a': return '\a';
-        case 'e': return '\e';
-        case 'f': return '\f';
-        case 'n': return '\n';
-        case 'r': return '\r';
-        case 't': return '\t';
-        case 'v': return '\v';
+        return int(c - '0');
     }
-    return 0;
+    else if ('a' <= c && c <= 'f')
+    {
+        return int(c - 'a') + 10;
+    }
+    else if ('A' <= c && c <= 'F')
+    {
+        return int(c - 'A') + 10;
+    }
+    return -1;
+}
+
+static nrex_char nrex_unescape(const nrex_char*& c)
+{
+    switch (c[1])
+    {
+        case '0': ++c; return '\0';
+        case 'a': ++c; return '\a';
+        case 'e': ++c; return '\e';
+        case 'f': ++c; return '\f';
+        case 'n': ++c; return '\n';
+        case 'r': ++c; return '\r';
+        case 't': ++c; return '\t';
+        case 'v': ++c; return '\v';
+        case 'b': ++c; return '\b';
+        case 'x':
+        {
+            int point = 0;
+            for (int i = 2; i <= 3; ++i)
+            {
+                int res = nrex_parse_hex(c[i]);
+                if (res == -1)
+                {
+                    return '\0';
+                }
+                point = (point << 4) + res;
+            }
+            c = &c[3];
+            return nrex_char(point);
+        }
+        case 'u':
+        {
+            int point = 0;
+            for (int i = 2; i <= 5; ++i)
+            {
+                int res = nrex_parse_hex(c[i]);
+                if (res == -1)
+                {
+                    return '\0';
+                }
+                point = (point << 4) + res;
+            }
+            c = &c[5];
+            return nrex_char(point);
+        }
+    }
+    return (++c)[0];
 }
 
 struct nrex_search
 {
-    public:
         const nrex_char* str;
         nrex_result* captures;
         int end;
@@ -962,15 +1000,7 @@ bool nrex::compile(const nrex_char* pattern, bool extended)
                 }
                 else if (c[0] == '\\')
                 {
-                    nrex_char unescaped = nrex_unescape(c[1]);
-                    if (unescaped)
-                    {
-                        group->add_child(NREX_NEW(nrex_node_char(unescaped)));
-                        ++c;
-                        previous_child = unescaped;
-                        previous_child_single = true;
-                    }
-                    else if (nrex_is_shorthand(c[1]))
+                    if (nrex_is_shorthand(c[1]))
                     {
                         group->add_child(NREX_NEW(nrex_node_shorthand(c[1])));
                         ++c;
@@ -978,7 +1008,16 @@ bool nrex::compile(const nrex_char* pattern, bool extended)
                     }
                     else
                     {
-                        NREX_COMPILE_ERROR("escape token not recognised");
+                        const nrex_char* d = c;
+                        nrex_char unescaped = nrex_unescape(d);
+                        if (c == d)
+                        {
+                            NREX_COMPILE_ERROR("invalid escape token");
+                        }
+                        group->add_child(NREX_NEW(nrex_node_char(unescaped)));
+                        c = d;
+                        previous_child = unescaped;
+                        previous_child_single = true;
                     }
                 }
                 else if (previous_child_single && c[0] == '-')
@@ -989,12 +1028,12 @@ bool nrex::compile(const nrex_char* pattern, bool extended)
                     {
                         if (c[1] == '\\')
                         {
-                            next = nrex_unescape(c[2]);
-                            if (!next)
+                            const nrex_char* d = ++c;
+                            next = nrex_unescape(d);
+                            if (c == d)
                             {
-                                NREX_COMPILE_ERROR("unsupported escape token in range");
+                                NREX_COMPILE_ERROR("invalid escape token in range");
                             }
-                            c = &c[2];
                         }
                         else
                         {
@@ -1143,13 +1182,7 @@ bool nrex::compile(const nrex_char* pattern, bool extended)
         }
         else if (c[0] == '\\')
         {
-            nrex_char unescaped = nrex_unescape(c[1]);
-            if (unescaped)
-            {
-                stack.top()->add_child(NREX_NEW(nrex_node_char(unescaped)));
-                ++c;
-            }
-            else if (nrex_is_shorthand(c[1]))
+            if (nrex_is_shorthand(c[1]))
             {
                 stack.top()->add_child(NREX_NEW(nrex_node_shorthand(c[1])));
                 ++c;
@@ -1175,7 +1208,14 @@ bool nrex::compile(const nrex_char* pattern, bool extended)
             }
             else
             {
-                NREX_COMPILE_ERROR("escape token not recognised");
+                const nrex_char* d = c;
+                nrex_char unescaped = nrex_unescape(d);
+                if (c == d)
+                {
+                    NREX_COMPILE_ERROR("invalid escape token");
+                }
+                stack.top()->add_child(NREX_NEW(nrex_node_char(unescaped)));
+                c = d;
             }
         }
         else
