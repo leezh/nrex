@@ -811,7 +811,7 @@ struct nrex_node_quantifier : public nrex_node
 
         int test(nrex_search* s, int pos) const
         {
-            return test_step(s, pos, 1);
+            return test_step(s, pos, 0);
         }
 
         int test_step(nrex_search* s, int pos, int level) const
@@ -820,7 +820,7 @@ struct nrex_node_quantifier : public nrex_node
             {
                 return pos;
             }
-            if ((max >= 1 && level > max) || pos > s->end)
+            if ((max >= 0 && level > max) || pos > s->end)
             {
                 return -1;
             }
@@ -840,10 +840,14 @@ struct nrex_node_quantifier : public nrex_node
                     return res;
                 }
             }
-            int res = child->test(s, pos);
-            if (s->complete)
+            int res = pos;
+            if (level >= 1)
             {
-                return res;
+                res = child->test(s, pos);
+                if (s->complete)
+                {
+                    return res;
+                }
             }
             if (res >= 0)
             {
