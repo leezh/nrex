@@ -9,9 +9,13 @@ bar/1/abcdef/-1
 ./1/abc/0/a
 b./1/abc/1/bc
 .b/1/abc/0/ab
+
 b+/1/abc/1/b
 b+/1/abbc/1/bb
 b+c/1/abbc/1/bbc
+.+/1/#/-1
+.+/1/abcdef/0/abcdef
+b.+/1/abcdef/1/bcdef
 
 b*/1/abc/0/
 b*/1/abbc/0/
@@ -21,11 +25,44 @@ d*c/1/abbc/3/c
 .*/1/abcdef/0/abcdef
 b.*/1/abcdef/1/bcdef
 
+b?/1/abc/0/
+b?/1/abbc/0/
+b?c/1/abbc/2/bc
+d?c/1/abbc/3/c
+.?/1/#/-1
+.?/1/abcdef/0/a
+b.?/1/abcdef/1/bc
+
+a{0}b/1/abc/1/b
+a{0,0}b/1/abc/1/b
+a{3}b/1/abc/-1
+a{3}b/1/aaaabc/1/aaab
+a{3}b/1/aaaabc/1/aaab
+a{0,2}b/1/0abc/1/ab
+
+b.+?/1/abcdef/1/bc
+b.*?/1/abcdef/1/b
+b.??/1/abcdef/1/b
+a{3}?b/1/aaaabc/1/aaab
+
+a|b/1/abc/0/a
+a|b/1/foobar/3/b
+b|oo/1/foobar/1/oo
+
 b(a|c)/2/abc/1/bc/c
 b(a|c)/2/aba/1/ba/a
 b(a|cc)/2/abc/-1
 b(a|cc)/2/abcc/1/bcc/cc
 b(a|cc)/2/abcaba/4/ba/a
+
+b(a|cc)?/2/abcc/1/bcc/cc
+b(a|cc)??/2/abcc/1/b
+
+b(?:a|c)/1/abc/1/bc
+b(?:a|c)/1/aba/1/ba
+b(?:a|cc)/1/abc/-1
+b(?:a|cc)/1/abcc/1/bcc
+b(?:a|cc)/1/abcaba/4/ba
 
 a.(?=d)/1/a1b a2c a3d/8/a3
 a.(?=c|d)/1/a1b a2c a3d/4/a2
