@@ -1,0 +1,33 @@
+# Format:
+#   expression / captures / string / position / result / capture1 / capture2
+# For an empty search string use #
+
+foo/1/foobar/0/foo
+bar/1/foobar/3/bar
+bar/1/abcdef/-1
+
+./1/abc/0/a
+b./1/abc/1/bc
+.b/1/abc/0/ab
+b+/1/abc/1/b
+b+/1/abbc/1/bb
+b+c/1/abbc/1/bbc
+
+b*/1/abc/0/
+b*/1/abbc/0/
+b*c/1/abbc/1/bbc
+d*c/1/abbc/3/c
+.*/1/#/-1
+.*/1/abcdef/0/abcdef
+b.*/1/abcdef/1/bcdef
+
+b(a|c)/2/abc/1/bc/c
+b(a|c)/2/aba/1/ba/a
+b(a|cc)/2/abc/-1
+b(a|cc)/2/abcc/1/bcc/cc
+b(a|cc)/2/abcaba/4/ba/a
+
+a.(?=d)/1/a1b a2c a3d/8/a3
+a.(?=c|d)/1/a1b a2c a3d/4/a2
+a.(?!b)/1/a1b a2c a3d/4/a2
+a.(?!b|c)/1/a1b a2c a3d/8/a3

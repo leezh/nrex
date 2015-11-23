@@ -1012,7 +1012,11 @@ void nrex::reset()
 
 int nrex::capture_size() const
 {
-    return _capturing + 1;
+    if (_root)
+    {
+        return _capturing + 1;
+    }
+    return 0;
 }
 
 bool nrex::compile(const nrex_char* pattern, bool extended)
