@@ -105,6 +105,11 @@ int main()
             string result;
             stream >> result;
 
+            if (results[i].length == 0 && result.length() == 0)
+            {
+                continue;
+            }
+
             if (text.substr(results[i].start, results[i].length) != result)
             {
                 failed = true;
