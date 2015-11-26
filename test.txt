@@ -13,7 +13,6 @@ b./1/abc/1/bc
 b+/1/abc/1/b
 b+/1/abbc/1/bb
 b+c/1/abbc/1/bbc
-.+/1/#/-1
 .+/1/abcdef/0/abcdef
 b.+/1/abcdef/1/bcdef
 
@@ -21,7 +20,6 @@ b*/1/abc/0/
 b*/1/abbc/0/
 b*c/1/abbc/1/bbc
 d*c/1/abbc/3/c
-.*/1/#/-1
 .*/1/abcdef/0/abcdef
 b.*/1/abcdef/1/bcdef
 
@@ -29,7 +27,6 @@ b?/1/abc/0/
 b?/1/abbc/0/
 b?c/1/abbc/2/bc
 d?c/1/abbc/3/c
-.?/1/#/-1
 .?/1/abcdef/0/a
 b.?/1/abcdef/1/bc
 
