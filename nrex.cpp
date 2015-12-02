@@ -1198,15 +1198,6 @@ bool nrex::compile(const nrex_char* pattern, bool extended)
         }
         else if (nrex_is_quantifier(c[0]))
         {
-            if (stack.top()->back == NULL || !stack.top()->back->quantifiable)
-            {
-                if (c[0] == '{')
-                {
-                    stack.top()->add_child(NREX_NEW(nrex_node_char('{')));
-                    continue;
-                }
-                NREX_COMPILE_ERROR("element not quantifiable");
-            }
             int min = 0;
             int max = -1;
             bool valid_quantifier = true;
@@ -1278,6 +1269,10 @@ bool nrex::compile(const nrex_char* pattern, bool extended)
             }
             if (valid_quantifier)
             {
+                if (stack.top()->back == NULL || !stack.top()->back->quantifiable)
+                {
+                    NREX_COMPILE_ERROR("element not quantifiable");
+                }
                 nrex_node_quantifier* quant = NREX_NEW(nrex_node_quantifier(min, max));
                 if (min == max)
                 {
