@@ -15,6 +15,7 @@ b+/1/abbc/1/bb
 b+c/1/abbc/1/bbc
 .+/1/abcdef/0/abcdef
 b.+/1/abcdef/1/bcdef
++/0
 
 b*/1/abc/0/
 b*/1/abbc/0/
@@ -22,6 +23,7 @@ b*c/1/abbc/1/bbc
 d*c/1/abbc/3/c
 .*/1/abcdef/0/abcdef
 b.*/1/abcdef/1/bcdef
+*/0
 
 b?/1/abc/0/
 b?/1/abbc/0/
@@ -29,6 +31,7 @@ b?c/1/abbc/2/bc
 d?c/1/abbc/3/c
 .?/1/abcdef/0/a
 b.?/1/abcdef/1/bc
+?/0
 
 a{0}b/1/abc/1/b
 a{0,0}b/1/abc/1/b
@@ -36,6 +39,9 @@ a{3}b/1/abc/-1
 a{3}b/1/aaaabc/1/aaab
 a{3}b/1/aaaabc/1/aaab
 a{0,2}b/1/0abc/1/ab
+{0}/0
+{0/1/{0}/0/{0
+{a}/1/{a}/0/{a}
 
 b.+?/1/abcdef/1/bc
 b.*?/1/abcdef/1/b
@@ -51,9 +57,14 @@ b(a|c)/2/aba/1/ba/a
 b(a|cc)/2/abc/-1
 b(a|cc)/2/abcc/1/bcc/cc
 b(a|cc)/2/abcaba/4/ba/a
-
 b(a|cc)?/2/abcc/1/bcc/cc
 b(a|cc)??/2/abcc/1/b
+(.)\1*/2/abc/0/a/a
+(.)\1*/2/aaaabc/0/aaaa/a
+(/0
+)/0
+\1/0
+\1()/0
 
 b(?:a|c)/1/abc/1/bc
 b(?:a|c)/1/aba/1/ba
@@ -65,3 +76,21 @@ a.(?=d)/1/a1b a2c a3d/8/a3
 a.(?=c|d)/1/a1b a2c a3d/4/a2
 a.(?!b)/1/a1b a2c a3d/4/a2
 a.(?!b|c)/1/a1b a2c a3d/8/a3
+a.(?<=2)/1/a1b a2c a3d/4/a2
+a.(?<!1)/1/a1b a2c a3d/4/a2
+
+\w/1/-12a/1/1
+\w*/1/-12_3/0/
+\w+/1/-12_3/1/12_3
+\W/1/abcdefg/-1
+\W/1/a12-/3/-
+\W*/1/a12-=$_*/0/
+\W+/1/a12-=$_*/3/-=$
+\s./1/abcd efgh/4/ e
+\S./1/abcd efgh/0/ab
+\S./1/ efgh/1/ef
+
+abc\b/1/abcd abcdef abc/12/abc
+abc.\b/1/abcd abcdef abc/0/abcd
+abc\B/1/abcd abcdef abc/0/abc
+abc.\B/1/abcd abcdef abc/5/abcd
