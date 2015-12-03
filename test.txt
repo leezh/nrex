@@ -37,8 +37,8 @@ a{0}b/1/abc/1/b
 a{0,0}b/1/abc/1/b
 a{3}b/1/abc/-1
 a{3}b/1/aaaabc/1/aaab
-a{3}b/1/aaaabc/1/aaab
 a{0,2}b/1/0abc/1/ab
+a{0,2}b/1/0aaabc/2/aab
 {0}/0
 {0/1/{0}/0/{0
 a{0/1/a{0}/0/a{0

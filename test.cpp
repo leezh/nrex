@@ -105,8 +105,17 @@ int main()
             string result;
             stream >> result;
 
-            if (results[i].length == 0 && result.length() == 0)
+            if (result.length() == 1 && result.at(0) == '#')
             {
+                result.clear();
+            }
+
+            if (results[i].length == 0 || result.length() == 0)
+            {
+                if (results[i].length != result.length())
+                {
+                    failed = true;
+                }
                 continue;
             }
 
