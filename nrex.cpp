@@ -326,6 +326,10 @@ struct nrex_node_group : public nrex_node
                 int offset = 0;
                 if (mode == LookBehind)
                 {
+                    if (pos < length)
+                    {
+                        return -1;
+                    }
                     offset = length;
                 }
                 int res = childset[i]->test(s, pos - offset);
@@ -454,7 +458,7 @@ struct nrex_node_char : public nrex_node
 
         int test(nrex_search* s, int pos) const
         {
-            if (s->end == pos || s->at(pos) != ch)
+            if (s->end <= pos || 0 > pos || s->at(pos) != ch)
             {
                 return -1;
             }
@@ -477,7 +481,7 @@ struct nrex_node_range : public nrex_node
 
         int test(nrex_search* s, int pos) const
         {
-            if (s->end == pos)
+            if (s->end <= pos || 0 > pos)
             {
                 return -1;
             }
@@ -559,7 +563,7 @@ struct nrex_node_class : public nrex_node
 
         int test(nrex_search* s, int pos) const
         {
-            if (s->end == pos)
+            if (s->end <= pos || 0 > pos)
             {
                 return -1;
             }
@@ -731,7 +735,7 @@ struct nrex_node_shorthand : public nrex_node
 
         int test(nrex_search* s, int pos) const
         {
-            if (s->end == pos)
+            if (s->end <= pos || 0 > pos)
             {
                 return -1;
             }
