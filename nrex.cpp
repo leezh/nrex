@@ -987,6 +987,13 @@ nrex::nrex()
 {
 }
 
+nrex::nrex(const nrex_char* pattern, bool extended)
+    : _capturing(0)
+    , _root(NULL)
+{
+    compile(pattern, extended);
+}
+
 nrex::~nrex()
 {
     if (_root)
@@ -1380,6 +1387,10 @@ bool nrex::compile(const nrex_char* pattern, bool extended)
 
 bool nrex::match(const nrex_char* str, nrex_result* captures, int offset, int end) const
 {
+    if (!_root)
+    {
+        return false;
+    }
     nrex_search s(str, captures);
     if (end >= offset)
     {

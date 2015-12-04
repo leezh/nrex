@@ -59,7 +59,31 @@ class nrex
         int _capturing;
         nrex_node* _root;
     public:
+
+        /*!
+         * \brief Initialises an empty regex container
+         */
         nrex();
+
+        /*!
+         * \brief Initialises and compiles the regex pattern
+         *
+         * This calls nrex::compile() with the same arguments. To check whether
+         * the compilation was successfull, use nrex::valid().
+         *
+         * If the NREX_THROW_ERROR was defined it would automatically throw a
+         * runtime error nrex_compile_error if it encounters a problem when
+         * parsing the pattern.
+         *
+         * \param pattern   The regex pattern
+         * \param extended  If true, raises the limit on number of capture
+         *                  groups and back-references to 99. Otherwise limited
+         *                  to 9. Defaults to false.
+         *
+         * \see nrex::compile()
+         */
+        nrex(const nrex_char* pattern, bool extended = false);
+
         ~nrex();
 
         /*!
