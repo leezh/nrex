@@ -32,7 +32,7 @@ Currently supported features:
  * Unicode `\uFFFF` code points
  * Positive `(?=)` and negative `(?!)` lookahead
  * Positive `(?<=)` and negative `(?<!)` lookbehind (fixed length and no alternations)
- * Backreferences `\1` to `\9` (with option to expand to `\99`)
+ * Backreferences `\1` and `\g{1}` (limited by default to 9 - can be unlimited)
 
 ## License
 

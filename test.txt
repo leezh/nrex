@@ -62,7 +62,10 @@ b(a|cc)?/2/abcc/1/bcc/cc
 b(a|cc)??/2/abcc/1/b
 (.)\1*/2/abc/0/a/a
 (.)\1*/2/aaaabc/0/aaaa/a
+(.)\11/0
 (.)\2*/0
+(.)\g{1}*/2/aaaabc/0/aaaa/a
+(.)\g{1}1/2/aaaa1bc/2/aa1/a
 (/0
 )/0
 \1/0

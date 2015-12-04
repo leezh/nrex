@@ -987,11 +987,11 @@ nrex::nrex()
 {
 }
 
-nrex::nrex(const nrex_char* pattern, bool extended)
+nrex::nrex(const nrex_char* pattern, int captures)
     : _capturing(0)
     , _root(NULL)
 {
-    compile(pattern, extended);
+    compile(pattern, captures);
 }
 
 nrex::~nrex()
@@ -1026,7 +1026,7 @@ int nrex::capture_size() const
     return 0;
 }
 
-bool nrex::compile(const nrex_char* pattern, bool extended)
+bool nrex::compile(const nrex_char* pattern, int captures)
 {
     reset();
     nrex_node_group* root = NREX_NEW(nrex_node_group(_capturing));
@@ -1068,7 +1068,7 @@ bool nrex::compile(const nrex_char* pattern, bool extended)
                     NREX_COMPILE_ERROR("unrecognised qualifier for group");
                 }
             }
-            else if ((!extended && _capturing < 9) || (extended && _capturing < 99))
+            else if (captures >= 0 && _capturing < captures)
             {
                 nrex_node_group* group = NREX_NEW(nrex_node_group(++_capturing));
                 stack.top()->add_child(group);
@@ -1333,20 +1333,26 @@ bool nrex::compile(const nrex_char* pattern, bool extended)
                 stack.top()->add_child(NREX_NEW(nrex_node_shorthand(c[1])));
                 ++c;
             }
-            else if ('1' <= c[1] && c[1] <= '9')
+            else if (('1' <= c[1] && c[1] <= '9') || (c[1] == 'g' && c[2] == '{'))
             {
                 int ref = 0;
-                if (extended && '0' <= c[2] && c[2] <= '9')
+                bool unclosed = false;
+                if (c[1] == 'g')
                 {
-                    ref = int(c[1] - '0') * 10 + int(c[2] - '0');
+                    unclosed = true;
                     c = &c[2];
                 }
-                else
+                while ('0' <= c[1] && c[1] <= '9')
                 {
-                    ref = int(c[1] - '0');
+                    ref = ref * 10 + int(c[1] - '0');
                     ++c;
                 }
-                if (ref > _capturing)
+                if (c[1] == '}')
+                {
+                    unclosed = false;
+                    ++c;
+                }
+                if (ref > _capturing || ref <= 0 || unclosed)
                 {
                     NREX_COMPILE_ERROR("backreference to non-existent capture");
                 }
