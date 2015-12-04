@@ -1,4 +1,5 @@
 //  NREX: Node RegEx
+//  Version 0.1
 //
 //  Copyright (c) 2015, Zher Huei Lee
 //  All rights reserved.

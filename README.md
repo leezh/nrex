@@ -1,5 +1,7 @@
 # NREX: Node RegEx
 
+Version 0.1
+
 Small node-based regular expression library. It only does text pattern
 matchhing, not replacement. To use add the files `nrex.hpp`, `nrex.cpp`
 and `nrex_config.h` to your project and follow the example:
