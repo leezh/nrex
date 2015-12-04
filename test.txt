@@ -62,6 +62,7 @@ b(a|cc)?/2/abcc/1/bcc/cc
 b(a|cc)??/2/abcc/1/b
 (.)\1*/2/abc/0/a/a
 (.)\1*/2/aaaabc/0/aaaa/a
+(.)\2*/0
 (/0
 )/0
 \1/0
@@ -90,6 +91,40 @@ a.(?<!1)/1/a1b a2c a3d/4/a2
 \s./1/abcd efgh/4/ e
 \S./1/abcd efgh/0/ab
 \S./1/ efgh/1/ef
+
+[abc]/1/par/1/a
+[^abc]/1/bar/2/r
+[abc]+/1/wunderbar/6/ba
+[^abc]+/1/barstand/2/rst
+[a-z]/1/CamelCase/1/a
+[a-z]+/1/CamelCase/1/amel
+[A-Z]+/1/CamelCase/0/C
+[^A-Z]+/1/CamelCase/1/amel
+[a-f0-9]/1/hex/1/e
+[a-f0-9]+/1/x2a/1/2a
+[a-f0-9]+/1/x2A/1/2
+[a-fA-F0-9]+/1/x2A/1/2A
+
+[[:alpha:]]/1/123abc/3/a
+[[:alpha:]]+/1/123abc/3/abc
+[[:alnum:]]/1/123abc/0/1
+[[:alnum:]]+/1/123abc/0/123abc
+[0-9[:alpha:]]+/1/123abc/0/123abc
+[[:alnum]s/1/012xyz/-1
+[[:alnum]+/1/laun:dry/0/laun:
+
+(?:"(?:\\"|[^"])*"|\S)+/1/this is a string/0/this
+(?:"(?:\\"|[^"])*"|\S)+/1/"this is a string"/0/"this is a string"
+(?:"(?:\\"|[^"])*"|\S)+/1/"this" is a string/0/"this"
+(?:"(?:\\"|[^"])*"|\S)+/1/"this is \"a string\""/0/"this is \"a string\""
+(?:\S|"(?:\\"|[^"])*")+/1/"this is \"a string\""/0/"this
+
+^abc/1/ab abc abc/-1
+^abc/1/abc abc abc/0/abc
+abc$/1/abc abc ab/-1
+abc$/1/abc abc abc/8/abc
+^abc$/1/abc abc abc/-1
+\w*$/1/abc def ghi/8/ghi
 
 abc\b/1/abcd abcdef abc/12/abc
 abc.\b/1/abcd abcdef abc/0/abcd
