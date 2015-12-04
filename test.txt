@@ -83,6 +83,10 @@ a.(?!b)/1/a1b a2c a3d/4/a2
 a.(?!b|c)/1/a1b a2c a3d/8/a3
 a.(?<=2)/1/a1b a2c a3d/4/a2
 a.(?<!1)/1/a1b a2c a3d/4/a2
+(?=.)+/0
+(?<=.)+/0
+((?=.))+/2/abc/0
+((?<=.))+/2/abc/1
 
 \w/1/-12a/1/1
 \w*/1/-12_3/0/
@@ -128,6 +132,12 @@ abc$/1/abc abc ab/-1
 abc$/1/abc abc abc/8/abc
 ^abc$/1/abc abc abc/-1
 \w*$/1/abc def ghi/8/ghi
+$/1/abc/3/
+(?:^)+/1/abc/0/
+(?:^){0,5}/1/abc/0/
+(?:$)+/1/abc/3/
+$*/0
+^*/0
 
 abc\b/1/abcd abcdef abc/12/abc
 abc.\b/1/abcd abcdef abc/0/abcd

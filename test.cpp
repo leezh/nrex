@@ -56,7 +56,6 @@ int main()
             continue;
         }
 
-
         isstream stream(line);
         stream.imbue(locale);
 

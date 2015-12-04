@@ -299,6 +299,10 @@ struct nrex_node_group : public nrex_node
             {
                 length = 1;
             }
+            if (mode == LookAhead || mode == LookBehind)
+            {
+                quantifiable = false;
+            }
         }
 
         virtual ~nrex_node_group()
@@ -811,10 +815,10 @@ struct nrex_node_quantifier : public nrex_node
 
         int test(nrex_search* s, int pos) const
         {
-            return test_step(s, pos, 0);
+            return test_step(s, pos, 0, pos);
         }
 
-        int test_step(nrex_search* s, int pos, int level) const
+        int test_step(nrex_search* s, int pos, int level, int start) const
         {
             if (pos > s->end)
             {
@@ -840,6 +844,10 @@ struct nrex_node_quantifier : public nrex_node
             {
                 return -1;
             }
+            if (level > 1 && level > min + 1 && pos == start)
+            {
+                return -1;
+            }
             int res = pos;
             if (level >= 1)
             {
@@ -851,7 +859,7 @@ struct nrex_node_quantifier : public nrex_node
             }
             if (res >= 0)
             {
-                int res_step = test_step(s, res, level + 1);
+                int res_step = test_step(s, res, level + 1, start);
                 if (res_step >= 0)
                 {
                     return res_step;
