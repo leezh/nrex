@@ -1414,7 +1414,7 @@ bool nrex::match(const nrex_char* str, nrex_result* captures, int offset, int en
     {
         s.end = NREX_STRLEN(str);
     }
-    for (int i = offset; i < s.end; ++i)
+    for (int i = offset; i <= s.end; ++i)
     {
         for (int c = 0; c <= _capturing; ++c)
         {
