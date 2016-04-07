@@ -274,25 +274,31 @@ struct nrex_node
         }
 };
 
+enum nrex_group_type
+{
+    nrex_group_capture,
+    nrex_group_non_capture,
+    nrex_group_bracket,
+    nrex_group_look_ahead,
+    nrex_group_look_behind,
+};
+
 struct nrex_node_group : public nrex_node
 {
-        static const int NonCapture = -1;
-        static const int Bracket = -2;
-        static const int LookAhead = -3;
-        static const int LookBehind = -4;
-
-        int mode;
+        nrex_group_type type;
+        int id;
         bool negate;
         nrex_array<nrex_node*> childset;
         nrex_node* back;
 
-        nrex_node_group(int mode)
+        nrex_node_group(nrex_group_type type, int id = 0)
             : nrex_node(true)
-            , mode(mode)
+            , type(type)
+            , id(id)
             , negate(false)
             , back(NULL)
         {
-            if (mode != Bracket)
+            if (type != nrex_group_bracket)
             {
                 length = 0;
             }
@@ -300,7 +306,7 @@ struct nrex_node_group : public nrex_node
             {
                 length = 1;
             }
-            if (mode == LookAhead || mode == LookBehind)
+            if (type == nrex_group_look_ahead || type == nrex_group_look_behind)
             {
                 quantifiable = false;
             }
@@ -317,15 +323,15 @@ struct nrex_node_group : public nrex_node
 
         int test(nrex_search* s, int pos) const
         {
-            if (mode >= 0)
+            if (type == nrex_group_capture)
             {
-                s->captures[mode].start = pos;
+                s->captures[id].start = pos;
             }
             for (unsigned int i = 0; i < childset.size(); ++i)
             {
                 s->complete = false;
                 int offset = 0;
-                if (mode == LookBehind)
+                if (type == nrex_group_look_behind)
                 {
                     if (pos < length)
                     {
@@ -355,11 +361,11 @@ struct nrex_node_group : public nrex_node
                 }
                 if (res >= 0)
                 {
-                    if (mode >= 0)
+                    if (type == nrex_group_capture)
                     {
-                        s->captures[mode].length = res - pos;
+                        s->captures[id].length = res - pos;
                     }
-                    else if (mode == LookAhead || mode == LookBehind)
+                    else if (type == nrex_group_look_ahead || type == nrex_group_look_behind)
                     {
                         res = pos;
                     }
@@ -371,16 +377,16 @@ struct nrex_node_group : public nrex_node
 
         virtual int test_parent(nrex_search* s, int pos) const
         {
-            if (mode >= 0)
+            if (type == nrex_group_capture)
             {
-                s->captures[mode].length = pos - s->captures[mode].start;
+                s->captures[id].length = pos - s->captures[id].start;
             }
             return nrex_node::test_parent(s, pos);
         }
 
         void add_childset()
         {
-            if (childset.size() > 0 && mode != Bracket)
+            if (childset.size() > 0 && type != nrex_group_bracket)
             {
                 length = -1;
             }
@@ -391,7 +397,7 @@ struct nrex_node_group : public nrex_node
         {
             node->parent = this;
             node->previous = back;
-            if (back && mode != Bracket)
+            if (back && type != nrex_group_bracket)
             {
                 back->next = node;
             }
@@ -399,7 +405,7 @@ struct nrex_node_group : public nrex_node
             {
                 childset.push(node);
             }
-            if (mode != Bracket)
+            if (type != nrex_group_bracket)
             {
                 increment_length(node->length);
             }
@@ -418,7 +424,7 @@ struct nrex_node_group : public nrex_node
             {
                 childset.pop();
             }
-            if (mode != Bracket)
+            if (type != nrex_group_bracket)
             {
                 increment_length(old->length, true);
             }
@@ -436,7 +442,7 @@ struct nrex_node_group : public nrex_node
                 {
                     childset.pop();
                 }
-                if (mode != Bracket)
+                if (type != nrex_group_bracket)
                 {
                     increment_length(old->length, true);
                 }
@@ -986,7 +992,7 @@ bool nrex_has_lookbehind(nrex_array<nrex_node_group*>& stack)
 {
     for (unsigned int i = 0; i < stack.size(); i++)
     {
-        if (stack[i]->mode == nrex_node_group::LookBehind)
+        if (stack[i]->type == nrex_group_look_behind)
         {
             return true;
         }
@@ -1042,7 +1048,7 @@ int nrex::capture_size() const
 bool nrex::compile(const nrex_char* pattern, int captures)
 {
     reset();
-    nrex_node_group* root = NREX_NEW(nrex_node_group(_capturing));
+    nrex_node_group* root = NREX_NEW(nrex_node_group(nrex_group_capture, _capturing));
     nrex_array<nrex_node_group*> stack;
     stack.push(root);
     _root = root;
@@ -1056,14 +1062,14 @@ bool nrex::compile(const nrex_char* pattern, int captures)
                 if (c[2] == ':')
                 {
                     c = &c[2];
-                    nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_node_group::NonCapture));
+                    nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_group_non_capture));
                     stack.top()->add_child(group);
                     stack.push(group);
                 }
                 else if (c[2] == '!' || c[2] == '=')
                 {
                     c = &c[2];
-                    nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_node_group::LookAhead));
+                    nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_group_look_ahead));
                     group->negate = (c[0] == '!');
                     stack.top()->add_child(group);
                     stack.push(group);
@@ -1071,7 +1077,7 @@ bool nrex::compile(const nrex_char* pattern, int captures)
                 else if (c[2] == '<' && (c[3] == '!' || c[3] == '='))
                 {
                     c = &c[3];
-                    nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_node_group::LookBehind));
+                    nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_group_look_behind));
                     group->negate = (c[0] == '!');
                     stack.top()->add_child(group);
                     stack.push(group);
@@ -1083,13 +1089,13 @@ bool nrex::compile(const nrex_char* pattern, int captures)
             }
             else if (captures >= 0 && _capturing < captures)
             {
-                nrex_node_group* group = NREX_NEW(nrex_node_group(++_capturing));
+                nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_group_capture, ++_capturing));
                 stack.top()->add_child(group);
                 stack.push(group);
             }
             else
             {
-                nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_node_group::NonCapture));
+                nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_group_non_capture));
                 stack.top()->add_child(group);
                 stack.push(group);
             }
@@ -1107,7 +1113,7 @@ bool nrex::compile(const nrex_char* pattern, int captures)
         }
         else if (c[0] == '[')
         {
-            nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_node_group::Bracket));
+            nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_group_bracket));
             stack.top()->add_child(group);
             if (c[1] == '^')
             {
