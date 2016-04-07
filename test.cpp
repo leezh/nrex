@@ -62,7 +62,7 @@ int main()
         string pattern;
         stream >> pattern;
         tests++;
-        std::cout << "Line " << line_number << " ";
+        std::cout << "Line " << line_number << std::endl;
 
         int captures = 0;
         stream >> captures;
@@ -70,13 +70,13 @@ int main()
         n.compile(pattern.c_str());
         if (n.capture_size() != captures)
         {
-            std::cout << " FAILED (Compile)" << std::endl;
+            std::cout << "    FAILED (Compile)" << std::endl;
             continue;
         }
 
         if (captures == 0)
         {
-            std::cout << " OK" << std::endl;
+            std::cout << "    OK" << std::endl;
             passed++;
             continue;
         }
@@ -97,6 +97,8 @@ int main()
         if ((position >= 0) != found || (found && position != results[0].start))
         {
             failed = true;
+            std::cout << "    Mismatched starting positions. Expected: ";
+            std::cout << position << " Got: " << results[0].start << std::endl;
         }
 
         for (int i = 0; i < captures; i++)
@@ -109,29 +111,28 @@ int main()
                 result.clear();
             }
 
-            if (results[i].length == 0 || result.length() == 0)
+            std::string capture;
+            if (results[i].length != 0)
             {
-                if (results[i].length != result.length())
-                {
-                    failed = true;
-                }
-                continue;
+                capture = text.substr(results[i].start, results[i].length);
             }
 
-            if (text.substr(results[i].start, results[i].length) != result)
+            if (capture != result)
             {
                 failed = true;
+                std::cout << "    Mismatched results. Expected: '" << result;
+                std::cout << "'' Got: '" << capture << "'" << std::endl;
             }
         }
 
         if (!failed)
         {
-            std::cout << " OK" << std::endl;
+            std::cout << "    OK" << std::endl;
             passed++;
         }
         else
         {
-            std::cout << " FAILED (Tests)" << std::endl;
+            std::cout << "    FAILED (Tests)" << std::endl;
         }
     }
     std::cout << "==================" << std::endl;
