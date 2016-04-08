@@ -68,6 +68,13 @@ class nrex_array
         {
         }
 
+        nrex_array(unsigned int size)
+            : _data(NREX_NEW_ARRAY(T, size))
+            , _reserved(size)
+            , _size(0)
+        {
+        }
+
         ~nrex_array()
         {
             NREX_DELETE_ARRAY(_data);
@@ -100,7 +107,7 @@ class nrex_array
             _size++;
         }
 
-        T& top()
+        const T& top() const
         {
             return _data[_size - 1];
         }
@@ -189,17 +196,19 @@ struct nrex_search
         nrex_result* captures;
         int end;
         bool complete;
+        nrex_array<int> lookahead_pos;
 
         nrex_char at(int pos)
         {
             return str[pos];
         }
 
-        nrex_search(const nrex_char* str, nrex_result* captures)
+        nrex_search(const nrex_char* str, nrex_result* captures, int lookahead)
             : str(str)
             , captures(captures)
             , end(0)
         {
+            lookahead_pos.reserve(lookahead);
         }
 };
 
@@ -339,7 +348,15 @@ struct nrex_node_group : public nrex_node
                     }
                     offset = length;
                 }
+                if (type == nrex_group_look_ahead)
+                {
+                    s->lookahead_pos.push(pos);
+                }
                 int res = childset[i]->test(s, pos - offset);
+                if (type == nrex_group_look_ahead)
+                {
+                    s->lookahead_pos.pop();
+                }
                 if (s->complete)
                 {
                     return res;
@@ -380,6 +397,10 @@ struct nrex_node_group : public nrex_node
             if (type == nrex_group_capture)
             {
                 s->captures[id].length = pos - s->captures[id].start;
+            }
+            if (type == nrex_group_look_ahead)
+            {
+                pos = s->lookahead_pos[id];
             }
             return nrex_node::test_parent(s, pos);
         }
@@ -1002,12 +1023,14 @@ bool nrex_has_lookbehind(nrex_array<nrex_node_group*>& stack)
 
 nrex::nrex()
     : _capturing(0)
+    , _lookahead_depth(0)
     , _root(NULL)
 {
 }
 
 nrex::nrex(const nrex_char* pattern, int captures)
     : _capturing(0)
+    , _lookahead_depth(0)
     , _root(NULL)
 {
     compile(pattern, captures);
@@ -1029,6 +1052,7 @@ bool nrex::valid() const
 void nrex::reset()
 {
     _capturing = 0;
+    _lookahead_depth = 0;
     if (_root)
     {
         NREX_DELETE(_root);
@@ -1051,6 +1075,7 @@ bool nrex::compile(const nrex_char* pattern, int captures)
     nrex_node_group* root = NREX_NEW(nrex_node_group(nrex_group_capture, _capturing));
     nrex_array<nrex_node_group*> stack;
     stack.push(root);
+    int lookahead_level = 0;
     _root = root;
 
     for (const nrex_char* c = pattern; c[0] != '\0'; ++c)
@@ -1069,10 +1094,14 @@ bool nrex::compile(const nrex_char* pattern, int captures)
                 else if (c[2] == '!' || c[2] == '=')
                 {
                     c = &c[2];
-                    nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_group_look_ahead));
+                    nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_group_look_ahead, ++lookahead_level - 1));
                     group->negate = (c[0] == '!');
                     stack.top()->add_child(group);
                     stack.push(group);
+                    if (lookahead_level > _lookahead_depth)
+                    {
+                        _lookahead_depth = lookahead_level;
+                    }
                 }
                 else if (c[2] == '<' && (c[3] == '!' || c[3] == '='))
                 {
@@ -1104,6 +1133,10 @@ bool nrex::compile(const nrex_char* pattern, int captures)
         {
             if (stack.size() > 1)
             {
+                if (stack.top()->type == nrex_group_look_ahead)
+                {
+                    --lookahead_level;
+                }
                 stack.pop();
             }
             else
@@ -1416,7 +1449,7 @@ bool nrex::match(const nrex_char* str, nrex_result* captures, int offset, int en
     {
         return false;
     }
-    nrex_search s(str, captures);
+    nrex_search s(str, captures, _lookahead_depth);
     if (end >= offset)
     {
         s.end = end;

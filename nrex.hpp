@@ -58,6 +58,7 @@ class nrex
 {
     private:
         int _capturing;
+        int _lookahead_depth;
         nrex_node* _root;
     public:
 
