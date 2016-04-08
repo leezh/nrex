@@ -336,8 +336,10 @@ struct nrex_node_group : public nrex_node
 
         int test(nrex_search* s, int pos) const
         {
+            int old_start;
             if (type == nrex_group_capture)
             {
+                old_start = s->captures[id].start;
                 s->captures[id].start = pos;
             }
             for (unsigned int i = 0; i < childset.size(); ++i)
@@ -392,6 +394,10 @@ struct nrex_node_group : public nrex_node
                     }
                     return next ? next->test(s, res) : res;
                 }
+            }
+            if (type == nrex_group_capture)
+            {
+                s->captures[id].start = old_start;
             }
             return -1;
         }
