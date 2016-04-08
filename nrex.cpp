@@ -248,13 +248,17 @@ struct nrex_node
             {
                 pos = next->test(s, pos);
             }
+            if (pos >= 0)
+            {
+                s->complete = true;
+            }
             if (parent && pos >= 0)
             {
                 pos = parent->test_parent(s, pos);
             }
-            if (pos >= 0)
+            if (pos < 0)
             {
-                s->complete = true;
+                s->complete = false;
             }
             return pos;
         }
@@ -914,6 +918,12 @@ struct nrex_node_quantifier : public nrex_node
             }
             return -1;
         }
+
+        virtual int test_parent(nrex_search* s, int pos) const
+        {
+            s->complete = false;
+            return pos;
+        }
 };
 
 struct nrex_node_anchor : public nrex_node
@@ -1075,7 +1085,7 @@ bool nrex::compile(const nrex_char* pattern, int captures)
     nrex_node_group* root = NREX_NEW(nrex_node_group(nrex_group_capture, _capturing));
     nrex_array<nrex_node_group*> stack;
     stack.push(root);
-    int lookahead_level = 0;
+    unsigned int lookahead_level = 0;
     _root = root;
 
     for (const nrex_char* c = pattern; c[0] != '\0'; ++c)
@@ -1094,7 +1104,7 @@ bool nrex::compile(const nrex_char* pattern, int captures)
                 else if (c[2] == '!' || c[2] == '=')
                 {
                     c = &c[2];
-                    nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_group_look_ahead, ++lookahead_level - 1));
+                    nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_group_look_ahead, lookahead_level++));
                     group->negate = (c[0] == '!');
                     stack.top()->add_child(group);
                     stack.push(group);
