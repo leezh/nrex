@@ -1,5 +1,7 @@
 # NREX: Node RegEx
 
+[![Build Status](https://travis-ci.org/leezh/nrex.svg?branch=master)](https://travis-ci.org/leezh/nrex)
+
 Version 0.1
 
 Small node-based regular expression library. It only does text pattern
