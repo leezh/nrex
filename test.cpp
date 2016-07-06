@@ -87,7 +87,7 @@ int main()
         {
             text.clear();
         }
-        nrex_result results[captures];
+        nrex_result* results = new nrex_result[captures];
         bool found = n.match(text.c_str(), results);
 
         bool failed = false;
@@ -134,6 +134,8 @@ int main()
         {
             std::cout << "    FAILED (Tests)" << std::endl;
         }
+
+        delete[] results;
     }
     std::cout << "==================" << std::endl;
     std::cout << "Tests: " << tests << std::endl;
