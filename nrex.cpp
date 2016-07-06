@@ -25,6 +25,7 @@
 //
 
 #include "nrex.hpp"
+#include <climits>
 
 #ifdef NREX_UNICODE
 #include <wctype.h>
@@ -1138,7 +1139,7 @@ bool nrex::compile(const nrex_char* pattern, int captures)
                     NREX_COMPILE_ERROR("unrecognised qualifier for group");
                 }
             }
-            else if (captures >= 0 && _capturing < captures)
+            else if (captures >= 0 && _capturing < captures && _capturing < INT_MAX)
             {
                 nrex_node_group* group = NREX_NEW(nrex_node_group(nrex_group_capture, ++_capturing));
                 stack.top()->add_child(group);
