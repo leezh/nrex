@@ -155,7 +155,7 @@ static nrex_char nrex_unescape(const nrex_char*& c)
     {
         case '0': ++c; return '\0';
         case 'a': ++c; return '\a';
-        case 'e': ++c; return '\e';
+        case 'e': ++c; return '\x1B';
         case 'f': ++c; return '\f';
         case 'n': ++c; return '\n';
         case 'r': ++c; return '\r';
