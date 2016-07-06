@@ -300,7 +300,7 @@ enum nrex_group_type
     nrex_group_non_capture,
     nrex_group_bracket,
     nrex_group_look_ahead,
-    nrex_group_look_behind,
+    nrex_group_look_behind
 };
 
 struct nrex_node_group : public nrex_node
